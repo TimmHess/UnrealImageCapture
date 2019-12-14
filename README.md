@@ -366,8 +366,7 @@ void ACaptureManager::Tick(float DeltaTime)
 # 
 
 For test purposes we can call the `CaptureColorNonBlocking()` from the `LevelBlueprint` attaching it to a button press.
-
-[Image of the level blueprint]
+![alt-text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/LevelBlueprint_ColorCapture.png)
 
 The images captured will now be saved into your project's `Saved` directory.
 
