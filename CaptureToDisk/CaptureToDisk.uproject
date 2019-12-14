@@ -1,0 +1,16 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{00045FC6-08D7-53BB-93E4-85C2ADCC0C2E}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "CaptureToDisk",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine"
+			]
+		}
+	]
+}
