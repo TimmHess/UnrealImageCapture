@@ -9,15 +9,8 @@ In this post I want to condense my findings on how to implement a component to c
 * Rendering images at high FPS without blocking the UE4 rendering thread
 * Rendering segmentation (or other graphics buffers) at the same time
 
-I will try to list all the postings that helped my put this together as they deserve a lot of credit, especially AirSim and UnrealCV, and of course Epic themselves giving full access to their source for the engine. Also this guide is not meant be perfect or complete, there is always room to enhance this methods, I just found my method to be working for all my current projects and would like to share it with you.
-
 **Disclaimer: I do not own any of the code. I merely condensed the sources already available online for easier use!**\
 **Also huge thanks to the UE4 AnswerHub community!**
-* Link to rendering to image
-* Link to async saving
-* Link to EpicGit
-* Link to UECV
-* Link to AirSim
 
 # How to Save Images to Disk In UE4 (without blocking the rendering thread)
 ## Prerequisite
