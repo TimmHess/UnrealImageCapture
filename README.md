@@ -1,5 +1,8 @@
 # Image Capturing With UnrealEngine4 For Deep Learning
 
+
+![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/CaptureResult.png)
+
 # A Small Introduction
 UnrealEngine4 is known to be a powerful tool to create virtual worlds as it is a AAA production game engine. Generating temporally consistent data, with automatic pixel-wise annotations from complex scenes, such as traffic scenarios, is a capability worth leveraging for machine learning, or more explicitly deep learning, contexts, and has been explored for a series of projects already. There are plugins available that handle rendering images from UE4 to disk at runtime, such as [UnrealCV](https://unrealcv.org/)  and [AirSim](https://github.com/microsoft/AirSim). 
 
