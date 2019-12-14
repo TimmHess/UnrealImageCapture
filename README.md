@@ -1,11 +1,11 @@
 # Image Capturing With UnrealEngine4 For Deep Learning
 
 # A Small Introduction
-UnrealEngine4 is known to be a powerful tool to create virutal worlds as it is a AAA production game engine. Generating temproally consistent data, with automatic pixel-wise annotations from complexe scenes, such as traffic szenarios, is a capability worth levraging for machine learning, or more explicitly deep learning, contexts, and has been explored for a series of projects already. There are plugins avilable that handle rendering images from UE4 to disk at runtime, such as [UnrealCV](https://unrealcv.org/)  and [AirSim](https://github.com/microsoft/AirSim). 
+UnrealEngine4 is known to be a powerful tool to create virtual worlds as it is a AAA production game engine. Generating temporally consistent data, with automatic pixel-wise annotations from complex scenes, such as traffic scenarios, is a capability worth leveraging for machine learning, or more explicitly deep learning, contexts, and has been explored for a series of projects already. There are plugins available that handle rendering images from UE4 to disk at runtime, such as [UnrealCV](https://unrealcv.org/)  and [AirSim](https://github.com/microsoft/AirSim). 
 
-When I was setting up a scene for my research these plugins were just not yet supporting the latest engine version I wanted/needed to use for various feature reasons, and I was missing a place where knowledge of how to setup a capturing component for rendering images to disk myself was explaind for non graphics-programmers. There is but of course a lot of source code available from the projects mentioned earlier and there are a lot of postings scattered across multiple platforms explaining parts of the problem and giving code for possible solutions even though they may be meant for a diffrent issue.\
+When I was setting up a scene for my research these plugins were just not yet supporting the latest engine version I wanted/needed to use for various feature reasons, and I was missing a place where knowledge of how to setup a capturing component for rendering images to disk myself was explains for non graphics-programmers. There is but of course a lot of source code available from the projects mentioned earlier and there are a lot of postings scattered across multiple platforms explaining parts of the problem and giving code for possible solutions even though they may be meant for a different issue.\
 [Image of Scene with Segmentation]\
-In this post I want to condens my findings on how to implement a component to capture images to disk from an arbitrary UE4 scene **from scratch** lowering the bar for UE4 beginners. This will include:\
+In this post I want to condense my findings on how to implement a component to capture images to disk from an arbitrary UE4 scene **from scratch** lowering the bar for UE4 beginners. This will include:\
 * Rendering images at high FPS without blocking the UE4 rendering thread
 * Rendering segmentation (or other graphics buffers) at the same time
 
@@ -29,7 +29,7 @@ The component I am using for capturing is the ```SceneCaptureComponent2D``` prov
 
 Add a ```CaptureManager``` class of type Actor to your project.
 
-In the ```CaptureManager.h``` we add the folling:\
+In the ```CaptureManager.h``` we add the following:\
 **CaptureManager.h**
 ``` cpp
 #pragma once
@@ -46,7 +46,7 @@ ASceneCapture2D* ColorCaptureComponents;
 
 This enables you to assign a ```CaptureComponent2d``` to your ```CaptureManager``` code.
 
-Compile and place a ```CaptureManager``` in your scene. As it does not have any primitve to render you will only see it in the editor's outline. In the details panel of the placed ```CaptureManager``` you can now see the ```ColorCaptureComponent``` assigned to ```None```. From the drop down menu select the ```CaptureComponent2D``` you already placed in the scene.
+Compile and place a ```CaptureManager``` in your scene. As it does not have any primitive to render you will only see it in the editor's outline. In the details panel of the placed ```CaptureManager``` you can now see the ```ColorCaptureComponent``` assigned to ```None```. From the drop down menu select the ```CaptureComponent2D``` you already placed in the scene.
 
 Back to code: We will now prepare our yet "naked" CaptureComponent2D for capturing images, creating and assigning a RenderTarget, which is basically a Texture to store our image data to, and setting the camera properties. *Note: You could also do the this in the Editor but if you deal with, for example, multiple capture components etc., you may find it handy to not worry about creating and assigning all the components by hand*.
 
@@ -84,9 +84,9 @@ void ACaptureManager::SetupColorCaptureComponents(ASceneCapture2D* captureCompon
 
     // Setup the RenderTarget capture format
     renderTarget2D->InitAutoFormat(256, 256); // some random format, got crashing otherwise
-    int32 frameWidht = 640;
+    int32 frameWidth = 640;
     int32 frameHeight = 480;
-    renderTarget2D->InitCustomFormat(frameWidht, frameHeight, PF_B8G8R8A8, true); // PF_B8G8R8A8 disables HDR which will boost storing to disk due to less image information
+    renderTarget2D->InitCustomFormat(frameWidth, frameHeight, PF_B8G8R8A8, true); // PF_B8G8R8A8 disables HDR which will boost storing to disk due to less image information
     renderTarget2D->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
     renderTarget2D->bGPUSharedFlag = true; // demand buffer on GPU
 
@@ -117,9 +117,9 @@ Now that we have a RenderTarget applied to our CaptureComponent we can read its 
 
 #
 ## Organize RenderRequests
-We do this by basically reimplementing UE4's code for taking screenshots with the addition of not flushing our rendering pipeline to prevent rendering hickups dropping the framerate to 3 - 5 FPS. 
+We do this by basically re-implementing UE4's code for taking screenshots with the addition of not flushing our rendering pipeline to prevent rendering hiccups dropping the framerate to 3 - 5 FPS. 
 
-This comes with the price of needing to handle the waiting before an image is done being copied from GPU so that we do not read an old or unintialized buffer (Render Thread and GameThread are not synchronous). We do this by keeping a queue of ```RenderRequest``` that we can probe for being completed. 
+This comes with the price of needing to handle the waiting before an image is done being copied from GPU so that we do not read an old or uninitialized buffer (Render Thread and GameThread are not synchronous). We do this by keeping a queue of ```RenderRequest``` that we can probe for being completed. 
 
 We add the following ```struct``` to our CaptureManager class:
 
@@ -147,7 +147,7 @@ UCLASS()
 class ...
 [...]
 ```
-The ```Image``` will be the color buffer our CaptureComponent writes to. ```RenderFence``` is a neat feature of UE4 letting you put a  "fence" into the render pipeline that knows when it has passed the full pipeline, giving a way to assess whethere our render command must have been passed as well. The ```isPNG``` flag will be important later when we want to also store semantic labels which should not be stored as JPEG as the compression introduces small errors into the color/label data...
+The ```Image``` will be the color buffer our CaptureComponent writes to. ```RenderFence``` is a neat feature of UE4 letting you put a  "fence" into the render pipeline that knows when it has passed the full pipeline, giving a way to assess whether our render command must have been passed as well. The ```isPNG``` flag will be important later when we want to also store semantic labels which should not be stored as JPEG as the compression introduces small errors into the color/label data...
 
 Also we need to add our ```TQueue```, keeping track of our render requests:
 
@@ -175,7 +175,7 @@ public:
 
 ``` cpp
 void ACaptureManager::CaptureColorNonBlocking(ASceneCapture2D* CaptureComponent, bool IsSegmentation){
-    // Get RenderConterxt
+    // Get RenderContext
     FTextureRenderTargetResource* renderTargetResource = CaptureComponent->GetCaptureComponent2D()->TextureTarget->GameThread_GetRenderTargetResource();
 
     struct FReadSurfaceContext{
@@ -222,7 +222,7 @@ void ACaptureManager::CaptureColorNonBlocking(ASceneCapture2D* CaptureComponent,
         );
     });
 
-    // Notifiy new task in RenderQueue
+    // Notify new task in RenderQueue
     RenderRequestQueue.Enqueue(renderRequest);
 
     // Set RenderCommandFence
@@ -236,7 +236,7 @@ With this the image data is already stored in our queue, we now need to store it
 ## Save Image Data to Disk
 To do so, each tick of the `CaptureManager` we look up the first element of the `RenderQueue`, if its `RenderFence` is completed then we save the image to disk, else we do nothing.
 
-The last thing we need is a procedure to write to disk, this time without blocking our game thread. For this we implement an asynchonous procedure storing
+The last thing we need is a procedure to write to disk, this time without blocking our game thread. For this we implement an asynchronous procedure storing
 the data to disk.
 [Link to UnrealWiki](https://wiki.unrealengine.com/Using_AsyncTasks)
 
@@ -289,7 +289,7 @@ void AsyncSaveImageToDiskTask::DoWork(){
     UE_LOG(LogTemp, Log, TEXT("Stored Image: %s"), *FileName);
 }
 ```
-And a call from the `CaptureManager` to start the asnyc saving process:
+And a call from the `CaptureManager` to start the async saving process:
 
 **CaptureManager.h**
 ``` cpp
@@ -327,7 +327,7 @@ void ACaptureManager::Tick(float DeltaTime)
         FRenderRequest* nextRenderRequest = nullptr;
         RenderRequestQueue.Peek(nextRenderRequest);
 
-        int32 frameWidht = 640;
+        int32 frameWidth = 640;
         int32 frameHeight = 480;
 
         if(nextRenderRequest){ //nullptr check
@@ -340,7 +340,7 @@ void ACaptureManager::Tick(float DeltaTime)
 
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG); //EImageFormat::PNG //EImageFormat::JPEG
-                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidht, frameHeight, ERGBFormat::BGRA, 8);
+                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidth, frameHeight, ERGBFormat::BGRA, 8);
                     const TArray<uint8>& ImgData = imageWrapper->GetCompressed(5);
                     RunAsyncImageSaveTask(ImgData, fileName);
                 } else{
@@ -351,7 +351,7 @@ void ACaptureManager::Tick(float DeltaTime)
 
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG); //EImageFormat::PNG //EImageFormat::JPEG
-                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidht, frameHeight, ERGBFormat::BGRA, 8);
+                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidth, frameHeight, ERGBFormat::BGRA, 8);
                     const TArray<uint8>& ImgData = imageWrapper->GetCompressed(0);
                     RunAsyncImageSaveTask(ImgData, fileName);
                 }
@@ -394,7 +394,7 @@ Right-click to open the node search and type `SceneTexture`, select the node fro
 
 In the details of this node, select `CustomStencil` as `SceneTextureId`.
 
-Add a `Division` node and connect the `SceneTexture`'s `Color` output to the divison node. Set the division to be by 255. *Note: This is needed because the image buffer seems to be float valued, leading to values > 1 having no meaning, as image information ranges from 0.0 to 1.0.*
+Add a `Division` node and connect the `SceneTexture`'s `Color` output to the division node. Set the division to be by 255. *Note: This is needed because the image buffer seems to be float valued, leading to values > 1 having no meaning, as image information ranges from 0.0 to 1.0.*
 
 Apply and save the material.
 
@@ -465,7 +465,7 @@ protected:
 **CaptureManager.cpp**
 ``` cpp
 void ACaptureManager::SetupSegmentationCaptureComponent(ASceneCapture2D* ColorCapture){
-    // Spawn SegmentaitonCaptureComponents
+    // Spawn SegmentationCaptureComponents
     SpawnSegmentationCaptureComponent(ColorCapture);
 
     // Setup SegmentationCaptureComponent
@@ -501,6 +501,6 @@ To save the image information from SegmentationCapture we can simply use the `Ca
 #
 
 # Known Issues
-The `IImageWrapperModule`'s wrapping of the data is still done in GameThread rather than in a async call, which can actually consume more runtime than the saving to disk. Simply pushing the WrapperModule into the async proocedure does suffice since 1) it is a shared pointer, 2) the `ImageWrapperModule.CreateImageWrapper(...)` needs to be called from GameThread. I am grateful for any ideas on that..
+The `IImageWrapperModule`'s wrapping of the data is still done in GameThread rather than in a async call, which can actually consume more runtime than the saving to disk. Simply pushing the WrapperModule into the async procedure does suffice since 1) it is a shared pointer, 2) the `ImageWrapperModule.CreateImageWrapper(...)` needs to be called from GameThread. I am grateful for any ideas on that..
 
 It is possible that an image is saved every game tick at high fps. If saving to disk is actually slower than the delta time of the game tick another call to the shared IImageWrapper is made while its buffer is read for saving to disk. This results in a game crash. This should be fixable by adding semaphores, I just did not have the time to test this yet.
