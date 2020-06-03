@@ -2,23 +2,29 @@
 
 #include "CaptureManager.h"
 
-#include "Runtime/Engine/Classes/Components/SceneCaptureComponent2D.h"
-#include "Runtime/Engine/Classes/Engine/TextureRenderTarget2D.h"
+//#include "Runtime/Engine/Classes/Components/SceneCaptureComponent2D.h"
+//#include "Runtime/Engine/Classes/Engine/TextureRenderTarget2D.h"
 #include "Engine.h"
-#include <Runtime/Engine/Classes/Kismet/GameplayStatics.h>
-#include <Runtime/Engine/Public/ShowFlags.h>
+//#include <Runtime/Engine/Classes/Kismet/GameplayStatics.h>
+//#include <Runtime/Engine/Public/ShowFlags.h>
+#include "Components/SceneCaptureComponent2D.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Kismet/GameplayStatics.h"
+#include "ShowFlags.h"
 
 #include "RHICommandList.h"
 
-#include "IImageWrapper.h"
-#include "IImageWrapperModule.h"
+#include "ImageWrapper/Public/IImageWrapper.h"
+#include "ImageWrapper/Public/IImageWrapperModule.h"
+//#include "IImageWrapper.h"
+//#include "IImageWrapperModule.h"
 #include "ImageUtils.h"
 
-
+#include "Modules/ModuleManager.h"
 
 
 // Static ImageWrapperModule to prevent reloading -> this thing does not like to be reloaded..
-static IImageWrapperModule &ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+//static IImageWrapperModule &ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
 
 
 // Sets default values
@@ -56,6 +62,10 @@ void ACaptureManager::Tick(float DeltaTime)
 
         if(nextRenderRequest){ //nullptr check
             if(nextRenderRequest->RenderFence.IsFenceComplete()){ // Check if rendering is done, indicated by RenderFence
+
+                // Load the image wrapper module 
+                IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+
                 // Decide storing of data, either jpeg or png
                 if(nextRenderRequest->isPNG){
                     //Generate image name
