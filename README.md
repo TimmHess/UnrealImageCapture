@@ -15,9 +15,17 @@ In this post I want to condense my findings on how to implement a component to c
 **Disclaimer: I do not own any of the code. I merely condensed the sources already available online for easier use!**\
 **Also huge thanks to the UE4 AnswerHub community!**
 
+I will go through the code step by step so that it is hopefully easier to implement each step as you are following along. The full source code is placed in this git.
+
 # How to Save Images to Disk In UE4 (without blocking the rendering thread)
 ## Prerequisite
-You will need a UE4 c++ project. I will go through the code step by step so that it is hopefully easier to implement each step as you are following along. The full source code is placed in this git.
+You will need a UE4 C++ project. 
+
+Also, you might have to add a few packages to your `'YourProjectName'.Build.cs` file. These are already included into UnrealEngine, but they are sometimes not loaded automatically which will lead to unpleasant linker errors. Find the `'YourProjectName'.Build.cs` file in the `Source/'YourProjectName/` directory, and add or extend it to inlcude all modules listed in the following line:
+
+``` cpp
+PublicDependencyModuleNames.AddRange(new string[] {"Core", "CoreUObject", "Engine", "InputCore", "ImageWrapper", "RenderCore", "Renderer", "RHI" });
+```
 
 #
 ## Setup A ColorCapture Component
