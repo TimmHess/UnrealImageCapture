@@ -7,7 +7,6 @@
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetSystemLibrary.h"
 #include "ShowFlags.h"
 
 #include "RHICommandList.h"
@@ -32,12 +31,11 @@ void ACameraCaptureManager::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if(ColorCaptureComponent){ // nullptr check
-		SetupColorCaptureComponent(ColorCaptureComponent);
-    	SetupSegmentationCaptureComponent(ColorCaptureComponent);
+	if(CaptureComponent){ // nullptr check
+		SetupCaptureComponent(CaptureComponent);
+    	//SetupSegmentationCaptureComponent(ColorCaptureComponent);
 	} else{
-		UE_LOG(LogTemp, Error, TEXT("No ColorCaptureComponent set!"));
-		FGenericPlatformMisc::RequestExit(false);
+		UE_LOG(LogTemp, Error, TEXT("No CaptureComponent set!"));
 	}
 	
 }
@@ -47,15 +45,14 @@ void ACameraCaptureManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-
 	 // Read pixels once RenderFence is completed
     if(!RenderRequestQueue.IsEmpty()){
         // Peek the next RenderRequest from queue
         FRenderRequestStruct* nextRenderRequest = nullptr;
         RenderRequestQueue.Peek(nextRenderRequest);
 
-        int32 frameWidht = 640;
-        int32 frameHeight = 480;
+        //int32 frameWidht = 640;
+        //int32 frameHeight = 480;
 
         if(nextRenderRequest){ //nullptr check
             if(nextRenderRequest->RenderFence.IsFenceComplete()){ // Check if rendering is done, indicated by RenderFence
@@ -64,28 +61,34 @@ void ACameraCaptureManager::Tick(float DeltaTime)
                 IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
 
                 // Decide storing of data, either jpeg or png
-                if(nextRenderRequest->isPNG){
+                FString fileName = "";
+                if(UsePNG){
                     //Generate image name
-                    FString fileName = FPaths::ProjectSavedDir() + "mask";
+                    fileName = FPaths::ProjectSavedDir() + SubDirectoryName + "/img" + "_" + ToStringWithLeadingZeros(ImgCounter, NumDigits);
                     fileName += ".png"; // Add file ending
 
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG); //EImageFormat::PNG //EImageFormat::JPEG
-                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidht, frameHeight, ERGBFormat::BGRA, 8);
+                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::BGRA, 8);
                     const TArray<uint8>& ImgData = imageWrapper->GetCompressed(5);
                     RunAsyncImageSaveTask(ImgData, fileName);
                 } else{
-                    UE_LOG(LogTemp, Log, TEXT("Started Saving Color Image"));
                     // Generate image name
-                    FString fileName = FPaths::ProjectSavedDir() + "color";
+                    fileName = FPaths::ProjectSavedDir() + SubDirectoryName + "/img" + "_" + ToStringWithLeadingZeros(ImgCounter, NumDigits);
                     fileName += ".jpeg"; // Add file ending
 
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG); //EImageFormat::PNG //EImageFormat::JPEG
-                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidht, frameHeight, ERGBFormat::BGRA, 8);
+                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::BGRA, 8);
                     const TArray<uint8>& ImgData = imageWrapper->GetCompressed(0);
                     RunAsyncImageSaveTask(ImgData, fileName);
                 }
+
+                if(VerboseLogging && !fileName.IsEmpty()){
+                    UE_LOG(LogTemp, Warning, TEXT("%f"), *fileName);
+                }
+
+                ImgCounter += 1;
 
                 // Delete the first element from RenderQueue
                 RenderRequestQueue.Pop();
@@ -98,18 +101,23 @@ void ACameraCaptureManager::Tick(float DeltaTime)
 
 }
 
-void ACameraCaptureManager::SetupColorCaptureComponent(ASceneCapture2D* captureComponent){
+void ACameraCaptureManager::SetupCaptureComponent(ASceneCapture2D* captureComponent){
+    if(!IsValid(captureComponent)){
+        UE_LOG(LogTemp, Error, TEXT("SetupCaptureComponent: CaptureComponent is not valid!"));
+        return;
+    }
+
     // Create RenderTargets
     UTextureRenderTarget2D* renderTarget2D = NewObject<UTextureRenderTarget2D>();
 
     // Set FrameWidth and FrameHeight
-    renderTarget2D->TargetGamma = 1.2f;// for Vulkan //GEngine->GetDisplayGamma(); // for DX11/12
+    renderTarget2D->TargetGamma = GEngine->GetDisplayGamma(); //1.2f; // for Vulkan //GEngine->GetDisplayGamma(); // for DX11/12
 
     // Setup the RenderTarget capture format
     renderTarget2D->InitAutoFormat(256, 256); // some random format, got crashing otherwise
-    int32 frameWidht = 640;
-    int32 frameHeight = 480;
-    renderTarget2D->InitCustomFormat(frameWidht, frameHeight, PF_B8G8R8A8, true); // PF_B8G8R8A8 disables HDR which will boost storing to disk due to less image information
+    //int32 frameWidht = 640;
+    //int32 frameHeight = 480;
+    renderTarget2D->InitCustomFormat(FrameWidth, FrameHeight, PF_B8G8R8A8, true); // PF_B8G8R8A8 disables HDR which will boost storing to disk due to less image information
     renderTarget2D->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
     renderTarget2D->bGPUSharedFlag = true; // demand buffer on GPU
 
@@ -120,16 +128,26 @@ void ACameraCaptureManager::SetupColorCaptureComponent(ASceneCapture2D* captureC
     captureComponent->GetCaptureComponent2D()->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
     captureComponent->GetCaptureComponent2D()->ShowFlags.SetTemporalAA(true);
     // lookup more showflags in the UE4 documentation..
+
+    // Assign PostProcess Material if assigned
+    if(PostProcessMaterial){ // check nullptr
+        captureComponent->GetCaptureComponent2D()->AddOrUpdateBlendable(PostProcessMaterial);
+    } else {
+        UE_LOG(LogTemp, Log, TEXT("No PostProcessMaterial is assigend"));
+    }
+
 }
 
-void ACameraCaptureManager::CaptureColorNonBlocking(ASceneCapture2D* CaptureComponent, bool IsSegmentation){
+void ACameraCaptureManager::CaptureNonBlocking(ASceneCapture2D* Component, bool IsSegmentation){
     if(!IsValid(CaptureComponent)){
         UE_LOG(LogTemp, Error, TEXT("CaptureColorNonBlocking: CaptureComponent was not valid!"));
         return;
     }
 
+    Component->GetCaptureComponent2D()->TextureTarget->TargetGamma = GEngine->GetDisplayGamma();
+
     // Get RenderConterxt
-    FTextureRenderTargetResource* renderTargetResource = CaptureComponent->GetCaptureComponent2D()->TextureTarget->GameThread_GetRenderTargetResource();
+    FTextureRenderTargetResource* renderTargetResource = Component->GetCaptureComponent2D()->TextureTarget->GameThread_GetRenderTargetResource();
 
     struct FReadSurfaceContext{
         FRenderTarget* SrcRenderTarget;
@@ -183,7 +201,13 @@ void ACameraCaptureManager::CaptureColorNonBlocking(ASceneCapture2D* CaptureComp
 }
 
 
+/*
 void ACameraCaptureManager::SpawnSegmentationCaptureComponent(ASceneCapture2D* ColorCapture){
+	if(!IsValid(ColorCapture)){
+        UE_LOG(LogTemp, Error, TEXT("CaptureColorNonBlocking: CaptureComponent was not valid!"));
+        return;
+    }
+
     // Spawning a new SceneCaptureComponent
     ASceneCapture2D* newSegmentationCapture = (ASceneCapture2D*) GetWorld()->SpawnActor<ASceneCapture2D>(ASceneCapture2D::StaticClass());
     if(!newSegmentationCapture){ // nullptr check
@@ -203,8 +227,14 @@ void ACameraCaptureManager::SpawnSegmentationCaptureComponent(ASceneCapture2D* C
 
     UE_LOG(LogTemp, Warning, TEXT("Done..."));
 }
-
+*/
+/*
 void ACameraCaptureManager::SetupSegmentationCaptureComponent(ASceneCapture2D* ColorCapture){
+	if(!IsValid(ColorCapture)){
+        UE_LOG(LogTemp, Error, TEXT("CaptureColorNonBlocking: CaptureComponent was not valid!"));
+        return;
+    }
+
     // Spawn SegmentaitonCaptureComponents
     SpawnSegmentationCaptureComponent(ColorCapture);
 
@@ -218,6 +248,28 @@ void ACameraCaptureManager::SetupSegmentationCaptureComponent(ASceneCapture2D* C
         UE_LOG(LogTemp, Error, TEXT("PostProcessMaterial was nullptr!"));
     }
 }
+*/
+
+FString ACameraCaptureManager::ToStringWithLeadingZeros(int32 Integer, int32 MaxDigits){
+    FString result = FString::FromInt(Integer);
+    int32 stringSize = result.Len();
+    int32 stringDelta = MaxDigits - stringSize;
+    if(stringDelta < 0){
+        UE_LOG(LogTemp, Error, TEXT("MaxDigits of ImageCounter Overflow!"));
+        return result;
+    }
+    //FIXME: Smarter function for this..
+    FString leadingZeros = "";
+    for(size_t i=0;i<stringDelta;i++){
+        leadingZeros += "0";
+    }
+    result = leadingZeros + result;
+
+    return result;
+}
+
+
+
 
 
 void ACameraCaptureManager::RunAsyncImageSaveTask(TArray<uint8> Image, FString ImageName){

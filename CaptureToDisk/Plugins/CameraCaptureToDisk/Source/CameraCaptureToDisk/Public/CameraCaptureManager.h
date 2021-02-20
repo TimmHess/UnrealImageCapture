@@ -31,40 +31,63 @@ class CAMERACAPTURETODISK_API ACameraCaptureManager : public AActor
 public:	
 	// Sets default values for this actor's properties
 	ACameraCaptureManager();
-
-	// Color Capture  Components
+    
+    // Captured Data Sub-Directory Name 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture")
-    ASceneCapture2D* ColorCaptureComponent;
+    FString SubDirectoryName = "";
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture")
-    ASceneCapture2D* SegmentationCapture = nullptr;
+    int NumDigits = 6;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture")
+    int FrameWidth = 640;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture")
+    int FrameHeight = 480;
+
+    // If not UsePNG, JPEG format is used
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture")
+    bool UsePNG = false;
+
+	// Color Capture Components
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture")
+    ASceneCapture2D* CaptureComponent;
+
+    //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture")
+    //ASceneCapture2D* SegmentationCapture = nullptr;
 
     // PostProcessMaterial used for segmentation
-    UPROPERTY(EditAnywhere, Category="Segmentation Setup")
+    UPROPERTY(EditAnywhere, Category="Capture")
     UMaterial* PostProcessMaterial = nullptr;
+
+    UPROPERTY(EditAnywhere, Category="Logging")
+    bool VerboseLogging = false;
 
 protected:
 	// RenderRequest Queue
     TQueue<FRenderRequestStruct*> RenderRequestQueue;
 
+    int ImgCounter = 0;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	void SetupColorCaptureComponent(ASceneCapture2D* captureComponent);
+	void SetupCaptureComponent(ASceneCapture2D* captureComponent);
 
     // Creates an async task that will save the captured image to disk
     void RunAsyncImageSaveTask(TArray<uint8> Image, FString ImageName);
 
-    void SpawnSegmentationCaptureComponent(ASceneCapture2D* ColorCapture);
-    void SetupSegmentationCaptureComponent(ASceneCapture2D* ColorCapture);
+    //void SpawnSegmentationCaptureComponent(ASceneCapture2D* ColorCapture);
+    //void SetupSegmentationCaptureComponent(ASceneCapture2D* ColorCapture);
+
+    FString ToStringWithLeadingZeros(int32 Integer, int32 MaxDigits);
 
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable, Category = "ImageCapture")
-    void CaptureColorNonBlocking(ASceneCapture2D* CaptureComponent, bool IsSegmentation=false);
+    void CaptureNonBlocking(ASceneCapture2D* Component, bool IsSegmentation=false);
 };
 
 
