@@ -32,8 +32,7 @@ void ACameraCaptureManager::BeginPlay()
 	Super::BeginPlay();
 
 	if(CaptureComponent){ // nullptr check
-		SetupCaptureComponent(CaptureComponent);
-    	//SetupSegmentationCaptureComponent(ColorCaptureComponent);
+		SetupCaptureComponent();
 	} else{
 		UE_LOG(LogTemp, Error, TEXT("No CaptureComponent set!"));
 	}
@@ -101,8 +100,8 @@ void ACameraCaptureManager::Tick(float DeltaTime)
 
 }
 
-void ACameraCaptureManager::SetupCaptureComponent(ASceneCapture2D* captureComponent){
-    if(!IsValid(captureComponent)){
+void ACameraCaptureManager::SetupCaptureComponent(){
+    if(!IsValid(CaptureComponent)){
         UE_LOG(LogTemp, Error, TEXT("SetupCaptureComponent: CaptureComponent is not valid!"));
         return;
     }
@@ -122,32 +121,32 @@ void ACameraCaptureManager::SetupCaptureComponent(ASceneCapture2D* captureCompon
     renderTarget2D->bGPUSharedFlag = true; // demand buffer on GPU
 
     // Assign RenderTarget
-    captureComponent->GetCaptureComponent2D()->TextureTarget = renderTarget2D;
+    CaptureComponent->GetCaptureComponent2D()->TextureTarget = renderTarget2D;
 
     // Set Camera Properties
-    captureComponent->GetCaptureComponent2D()->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
-    captureComponent->GetCaptureComponent2D()->ShowFlags.SetTemporalAA(true);
+    CaptureComponent->GetCaptureComponent2D()->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+    CaptureComponent->GetCaptureComponent2D()->ShowFlags.SetTemporalAA(true);
     // lookup more showflags in the UE4 documentation..
 
     // Assign PostProcess Material if assigned
     if(PostProcessMaterial){ // check nullptr
-        captureComponent->GetCaptureComponent2D()->AddOrUpdateBlendable(PostProcessMaterial);
+        CaptureComponent->GetCaptureComponent2D()->AddOrUpdateBlendable(PostProcessMaterial);
     } else {
         UE_LOG(LogTemp, Log, TEXT("No PostProcessMaterial is assigend"));
     }
 
 }
 
-void ACameraCaptureManager::CaptureNonBlocking(ASceneCapture2D* Component, bool IsSegmentation){
+void ACameraCaptureManager::CaptureNonBlocking(){
     if(!IsValid(CaptureComponent)){
         UE_LOG(LogTemp, Error, TEXT("CaptureColorNonBlocking: CaptureComponent was not valid!"));
         return;
     }
 
-    Component->GetCaptureComponent2D()->TextureTarget->TargetGamma = GEngine->GetDisplayGamma();
+    CaptureComponent->GetCaptureComponent2D()->TextureTarget->TargetGamma = GEngine->GetDisplayGamma();
 
     // Get RenderConterxt
-    FTextureRenderTargetResource* renderTargetResource = Component->GetCaptureComponent2D()->TextureTarget->GameThread_GetRenderTargetResource();
+    FTextureRenderTargetResource* renderTargetResource = CaptureComponent->GetCaptureComponent2D()->TextureTarget->GameThread_GetRenderTargetResource();
 
     struct FReadSurfaceContext{
         FRenderTarget* SrcRenderTarget;
@@ -158,7 +157,6 @@ void ACameraCaptureManager::CaptureNonBlocking(ASceneCapture2D* Component, bool 
 
     // Init new RenderRequest
     FRenderRequestStruct* renderRequest = new FRenderRequestStruct();
-    renderRequest->isPNG = IsSegmentation;
 
     // Setup GPU command
     FReadSurfaceContext readSurfaceContext = {

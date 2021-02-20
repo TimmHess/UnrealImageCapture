@@ -15,10 +15,9 @@ struct FRenderRequestStruct{
 
     TArray<FColor> Image;
     FRenderCommandFence RenderFence;
-    bool isPNG;
 
     FRenderRequestStruct(){
-        isPNG = false;
+
     }
 };
 
@@ -44,7 +43,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture")
     int FrameHeight = 480;
 
-    // If not UsePNG, JPEG format is used
+    // If not UsePNG, JPEG format is used (For Non-Color purposes PNG is necessary, elsewise compression will mess with labels!)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture")
     bool UsePNG = false;
 
@@ -72,7 +71,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	void SetupCaptureComponent(ASceneCapture2D* captureComponent);
+	void SetupCaptureComponent();
 
     // Creates an async task that will save the captured image to disk
     void RunAsyncImageSaveTask(TArray<uint8> Image, FString ImageName);
@@ -87,7 +86,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable, Category = "ImageCapture")
-    void CaptureNonBlocking(ASceneCapture2D* Component, bool IsSegmentation=false);
+    void CaptureNonBlocking();
 };
 
 
