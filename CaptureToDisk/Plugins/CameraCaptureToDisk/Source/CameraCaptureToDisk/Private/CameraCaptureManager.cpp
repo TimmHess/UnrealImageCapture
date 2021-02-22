@@ -3,11 +3,16 @@
 
 #include "CameraCaptureManager.h"
 
-#include "Engine.h"
+//#include "Engine.h"
+#include "Runtime/Engine/Classes/Engine/Engine.h"
+
+#include "Engine/SceneCapture2D.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Kismet/GameplayStatics.h"
 #include "ShowFlags.h"
+
+#include "Materials/Material.h"
 
 #include "RHICommandList.h"
 
@@ -17,6 +22,8 @@
 #include "ImageUtils.h"
 
 #include "Modules/ModuleManager.h"
+
+#include "Misc/FileHelper.h"
 
 // Sets default values
 ACameraCaptureManager::ACameraCaptureManager()

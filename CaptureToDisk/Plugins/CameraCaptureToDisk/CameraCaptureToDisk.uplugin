@@ -4,7 +4,7 @@
 	"VersionName": "1.0",
 	"FriendlyName": "CameraCaptureToDisk",
 	"Description": "",
-	"Category": "Other",
+	"Category": "ImageCaptureToDisk",
 	"CreatedBy": "TimmHess",
 	"CreatedByURL": "",
 	"DocsURL": "",
@@ -17,7 +17,10 @@
 		{
 			"Name": "CameraCaptureToDisk",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64"
+			]
 		}
 	]
 }

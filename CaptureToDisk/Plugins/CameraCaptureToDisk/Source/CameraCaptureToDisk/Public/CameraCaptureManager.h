@@ -3,10 +3,14 @@
 #pragma once
 
 class ASceneCapture2D;
+class UMaterial;
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Containers/Queue.h"
 #include "CameraCaptureManager.generated.h"
+
+
 
 
 USTRUCT()
