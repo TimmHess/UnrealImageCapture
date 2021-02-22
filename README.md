@@ -23,7 +23,8 @@ Now there is also a **Plugin** version of the code available. It generally provi
 
 It comes with open sources so that everybody may compile it for their platform. (Only Win64 Engine version 4.22 binaries are included, more will follow soon (hopefully...))
 
-To incorporate the Plugin in to your project: Create a **Plugins** directory in your project and copy the ```\UnrealImageCapture\Plugins\CameraCaptureToDisk``` directory. Load the plugin in your project, if not automatically done by the editor, and simply place the `CameraCaptureManager_BP`, which is to be found in the plugin's contents, in the scene and fill in its required slots as depicted below. A ```PostProcessMaterial``` for segmentation is also located in the plugin's contents.
+To incorporate the Plugin in to your project: Create a **Plugins** directory in your project and copy the ```\UnrealImageCapture\Plugins\CameraCaptureToDisk``` directory. Load the plugin in your project, if not automatically done by the editor, and simply place the `CameraCaptureManager_BP`, which is to be found in the plugin's contents, in the scene and fill in its required slots as depicted below. This will require you to place a ```SceneCapture2D``` in your scene.
+A ```PostProcessMaterial``` for segmentation is also located in the plugin's contents.
 
 ![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/ColoreCaptureOutline.png)
 
