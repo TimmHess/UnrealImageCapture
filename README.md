@@ -3,6 +3,7 @@
 
 ![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/CaptureResult.png)
 
+
 # A Small Introduction
 UnrealEngine4 is known to be a powerful tool to create virtual worlds as it is a AAA production game engine. Generating temporally consistent data, with automatic pixel-wise annotations from complex scenes, such as traffic scenarios, is a capability worth leveraging for machine learning, or more explicitly deep learning, contexts, and has been explored for a series of projects already. There are plugins available that handle rendering images from UE4 to disk at runtime, such as [UnrealCV](https://unrealcv.org/)  and [AirSim](https://github.com/microsoft/AirSim). 
 
@@ -15,9 +16,30 @@ In this post I want to condense my findings on how to implement a component to c
 **Disclaimer: I do not own any of the code. I merely condensed the sources already available online for easier use!**\
 **Also huge thanks to the UE4 AnswerHub community!**
 
-I will go through the code step by step so that it is hopefully easier to implement each step as you are following along. The full source code is placed in this git.
+# Plugin Support
+Where the general idea of this repository is to communicate how to setup a custom image capturing in code, providing a baseline for further development to adapt the code to ones individual needs, I understand that Unreal's Blueprint interface is powerful and some people have their reasons not to dive into C++ development with UE4.
+
+Now there is also a **Plugin** version of the code available. It generally provides the same functionality as the tutorial code and is structured in the same way, with minor tweaks for more straight-forward use in blueprints.
+
+It comes with open sources so that everybody may compile it for their platform. (Only Win64 Engine version 4.22 binaries are included, more will follow soon (hopefully...))
+
+To incorporate the Plugin in to your project: Create a **Plugins** directory in your project and copy the ```\UnrealImageCapture\Plugins\CameraCaptureToDisk``` directory. Load the plugin in your project, if not automatically done by the editor, and simply place the `CameraCaptureManager_BP`, which is to be found in the plugin's contents, in the scene and fill in its required slots as depicted below. This will require you to place a ```SceneCapture2D``` in your scene.
+A ```PostProcessMaterial``` for segmentation is also located in the plugin's contents.
+
+![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/ColoreCaptureOutline.png)
+
+![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/SegmentaitonCaptureOutline.png)
+
+**Currently one should use JPEG for Color and PNG for Pixel-Segmentation** 
+
+An image-capturing-command can be triggered from Blueprint as exemplary depicted for the Level-Blueprint below:
+
+![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/LevelBlueprint_ColorCapture.png)
+
 
 # How to Save Images to Disk In UE4 (without blocking the rendering thread)
+I will go through the code step by step so that it is hopefully easier to implement each step as you are following along. The full source code is placed in this git.
+
 ## Prerequisite
 You will need a UE4 C++ project. 
 
