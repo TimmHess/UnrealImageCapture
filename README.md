@@ -26,15 +26,14 @@ It comes with open sources so that everybody may compile it for their platform. 
 To incorporate the Plugin in to your project: Create a **Plugins** directory in your project and copy the ```\UnrealImageCapture\Plugins\CameraCaptureToDisk``` directory. Load the plugin in your project, if not automatically done by the editor, and simply place the `CameraCaptureManager_BP`, which is to be found in the plugin's contents, in the scene and fill in its required slots as depicted below. This will require you to place a ```SceneCapture2D``` in your scene.
 A ```PostProcessMaterial``` for segmentation is also located in the plugin's contents.
 
-![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/ColoreCaptureOutline.png)
-
-![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/SegmentaitonCaptureOutline.png)
+![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/ColorCaptureOutline.png)
+![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/SegmentationCaptureOutline.png)
 
 **Currently one should use JPEG for Color and PNG for Pixel-Segmentation** 
 
 An image-capturing-command can be triggered from Blueprint as exemplary depicted for the Level-Blueprint below:
 
-![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/LevelBlueprint_ColorCapture.png)
+![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/BlueprintCapture.png)
 
 
 # How to Save Images to Disk In UE4 (without blocking the rendering thread)
