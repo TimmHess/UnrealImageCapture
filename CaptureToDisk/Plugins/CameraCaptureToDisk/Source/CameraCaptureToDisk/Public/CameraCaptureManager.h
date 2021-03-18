@@ -26,6 +26,19 @@ struct FRenderRequestStruct{
 };
 
 
+USTRUCT()
+struct FFloatRenderRequestStruct{
+    GENERATED_BODY()
+
+    TArray<FFloat16Color> Image;
+    FRenderCommandFence RenderFence;
+
+    FFloatRenderRequestStruct(){
+
+    }
+};
+
+
 UCLASS(Blueprintable)
 class CAMERACAPTURETODISK_API ACameraCaptureManager : public AActor
 {
@@ -51,6 +64,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture")
     bool UsePNG = false;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture")
+    bool UseFloat = false;
+
 	// Color Capture Components
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Capture")
     ASceneCapture2D* CaptureComponent;
@@ -69,6 +85,8 @@ protected:
 	// RenderRequest Queue
     TQueue<FRenderRequestStruct*> RenderRequestQueue;
 
+    // FloatRenderRequest Queue
+    TQueue<FFloatRenderRequestStruct*> RenderFloatRequestQueue;
     int ImgCounter = 0;
 
 protected:
@@ -78,7 +96,7 @@ protected:
 	void SetupCaptureComponent();
 
     // Creates an async task that will save the captured image to disk
-    void RunAsyncImageSaveTask(TArray<uint8> Image, FString ImageName);
+    void RunAsyncImageSaveTask(TArray64<uint8> Image, FString ImageName);
 
     //void SpawnSegmentationCaptureComponent(ASceneCapture2D* ColorCapture);
     //void SetupSegmentationCaptureComponent(ASceneCapture2D* ColorCapture);
@@ -91,6 +109,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "ImageCapture")
     void CaptureNonBlocking();
+
+    UFUNCTION(BlueprintCallable, Category = "ImageCapture")
+    void CaptureFloatNonBlocking();
 };
 
 
@@ -98,7 +119,7 @@ public:
 
 class AsyncSaveImageToDiskTask : public FNonAbandonableTask{
     public:
-        AsyncSaveImageToDiskTask(TArray<uint8> Image, FString ImageName);
+        AsyncSaveImageToDiskTask(TArray64<uint8> Image, FString ImageName);
         ~AsyncSaveImageToDiskTask();
 
     // Required by UE4!
@@ -107,7 +128,7 @@ class AsyncSaveImageToDiskTask : public FNonAbandonableTask{
     }
 
 protected:
-    TArray<uint8> ImageCopy;
+    TArray64<uint8> ImageCopy;
     FString FileName = "";
 
 public:
