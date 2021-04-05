@@ -275,7 +275,7 @@ class ... {
 
 class AsyncSaveImageToDiskTask : public FNonAbandonableTask{
     public:
-        AsyncSaveImageToDiskTask(TArray<uint8> Image, FString ImageName);
+        AsyncSaveImageToDiskTask(TArray64<uint8> Image, FString ImageName);
         ~AsyncSaveImageToDiskTask();
 
     // Required by UE4!
@@ -284,7 +284,7 @@ class AsyncSaveImageToDiskTask : public FNonAbandonableTask{
     }
 
 protected:
-    TArray<uint8> ImageCopy;
+    TArray64<uint8> ImageCopy;
     FString FileName = "";
 
 public:
@@ -301,7 +301,7 @@ static IImageWrapperModule &ImageWrapperModule = FModuleManager::LoadModuleCheck
 
 [...]
 
-AsyncSaveImageToDiskTask::AsyncSaveImageToDiskTask(TArray<uint8> Image, FString ImageName){
+AsyncSaveImageToDiskTask::AsyncSaveImageToDiskTask(TArray64<uint8> Image, FString ImageName){
     ImageCopy = Image;
     FileName = ImageName;
 }
@@ -321,12 +321,12 @@ And a call from the `CaptureManager` to start the async saving process:
 ``` cpp
 protected:
     // Creates an async task that will save the captured image to disk
-    void RunAsyncImageSaveTask(TArray<uint8> Image, FString ImageName);
+    void RunAsyncImageSaveTask(TArray64<uint8> Image, FString ImageName);
 ```
 
 **CaptureManager.cpp**
 ``` cpp
-void ACaptureManager::RunAsyncImageSaveTask(TArray<uint8> Image, FString ImageName){
+void ACaptureManager::RunAsyncImageSaveTask(TArray64<uint8> Image, FString ImageName){
     (new FAutoDeleteAsyncTask<AsyncSaveImageToDiskTask>(Image, ImageName))->StartBackgroundTask();
 }
 ```
@@ -367,7 +367,7 @@ void ACaptureManager::Tick(float DeltaTime)
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG); //EImageFormat::PNG //EImageFormat::JPEG
                     imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidth, frameHeight, ERGBFormat::BGRA, 8);
-                    const TArray<uint8>& ImgData = imageWrapper->GetCompressed(5);
+                    const TArray64<uint8>& ImgData = imageWrapper->GetCompressed(5);
                     RunAsyncImageSaveTask(ImgData, fileName);
                 } else{
                     UE_LOG(LogTemp, Log, TEXT("Started Saving Color Image"));
@@ -378,7 +378,7 @@ void ACaptureManager::Tick(float DeltaTime)
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG); //EImageFormat::PNG //EImageFormat::JPEG
                     imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidth, frameHeight, ERGBFormat::BGRA, 8);
-                    const TArray<uint8>& ImgData = imageWrapper->GetCompressed(0);
+                    const TArray64<uint8>& ImgData = imageWrapper->GetCompressed(0);
                     RunAsyncImageSaveTask(ImgData, fileName);
                 }
 

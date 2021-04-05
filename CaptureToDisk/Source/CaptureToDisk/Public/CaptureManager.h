@@ -56,7 +56,7 @@ protected:
     void SetupColorCaptureComponent(ASceneCapture2D* captureComponent);
 
     // Creates an async task that will save the captured image to disk
-    void RunAsyncImageSaveTask(TArray<uint8> Image, FString ImageName);
+    void RunAsyncImageSaveTask(TArray64<uint8> Image, FString ImageName);
 
     void SpawnSegmentationCaptureComponent(ASceneCapture2D* ColorCapture);
     void SetupSegmentationCaptureComponent(ASceneCapture2D* ColorCapture);
@@ -75,7 +75,7 @@ public:
 
 class AsyncSaveImageToDiskTask : public FNonAbandonableTask{
     public:
-        AsyncSaveImageToDiskTask(TArray<uint8> Image, FString ImageName);
+        AsyncSaveImageToDiskTask(TArray64<uint8> Image, FString ImageName);
         ~AsyncSaveImageToDiskTask();
 
     // Required by UE4!
@@ -84,7 +84,7 @@ class AsyncSaveImageToDiskTask : public FNonAbandonableTask{
     }
 
 protected:
-    TArray<uint8> ImageCopy;
+    TArray64<uint8> ImageCopy;
     FString FileName = "";
 
 public:

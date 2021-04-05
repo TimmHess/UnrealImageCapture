@@ -75,7 +75,8 @@ void ACaptureManager::Tick(float DeltaTime)
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG); //EImageFormat::PNG //EImageFormat::JPEG
                     imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidht, frameHeight, ERGBFormat::BGRA, 8);
-                    const TArray<uint8>& ImgData = imageWrapper->GetCompressed(5);
+                    const TArray64<uint8>& ImgData = imageWrapper->GetCompressed(5);
+                    //const TArray<uint8> ImgData = static_cast<TArray<uint8, FDefaultAllocator>>(imageWrapper->GetCompressed(5));
                     RunAsyncImageSaveTask(ImgData, fileName);
                 } else{
                     UE_LOG(LogTemp, Log, TEXT("Started Saving Color Image"));
@@ -86,7 +87,7 @@ void ACaptureManager::Tick(float DeltaTime)
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG); //EImageFormat::PNG //EImageFormat::JPEG
                     imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidht, frameHeight, ERGBFormat::BGRA, 8);
-                    const TArray<uint8>& ImgData = imageWrapper->GetCompressed(0);
+                    const TArray64<uint8> ImgData = imageWrapper->GetCompressed(0);
                     RunAsyncImageSaveTask(ImgData, fileName);
                 }
 
@@ -222,14 +223,14 @@ void ACaptureManager::SetupSegmentationCaptureComponent(ASceneCapture2D* ColorCa
 }
 
 
-void ACaptureManager::RunAsyncImageSaveTask(TArray<uint8> Image, FString ImageName){
+void ACaptureManager::RunAsyncImageSaveTask(TArray64<uint8> Image, FString ImageName){
     (new FAutoDeleteAsyncTask<AsyncSaveImageToDiskTask>(Image, ImageName))->StartBackgroundTask();
 }
 
 
 
 
-AsyncSaveImageToDiskTask::AsyncSaveImageToDiskTask(TArray<uint8> Image, FString ImageName){
+AsyncSaveImageToDiskTask::AsyncSaveImageToDiskTask(TArray64<uint8> Image, FString ImageName){
     ImageCopy = Image;
     FileName = ImageName;
 }

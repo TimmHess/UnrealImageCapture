@@ -287,45 +287,7 @@ void ACameraCaptureManager::CaptureFloatNonBlocking(){
     RenderFloatRequestQueue.Enqueue(renderFloatRequest);
     renderFloatRequest->RenderFence.BeginFence();
 
-	//FlushRenderingCommands();
-
-    ////////////////////
-
-
-    /*
-    IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
-    FString fileName = "";
-    fileName = FPaths::ProjectSavedDir() + SubDirectoryName + "/img" + "_" + ToStringWithLeadingZeros(ImgCounter, NumDigits);
-    fileName += ".exr"; // Add file ending
-
-    static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR); //EImageFormat::PNG //EImageFormat::JPEG
-    imageWrapper->SetRaw(renderFloatRequest->Image.GetData(), renderFloatRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::RGBA, 16);
-    const TArray64<uint8>& PngData = imageWrapper->GetCompressed(0);
-    FFileHelper::SaveArrayToFile(PngData, *fileName);
-    UE_LOG(LogTemp, Warning, TEXT("Saving Complete"));
-    */
-
-
-    ///////////////////////
-
-	// Copy the surface data into the output array.
-	//FFloat16Color* OutImageColors = reinterpret_cast<FFloat16Color*> (OutImageData);
-
-	// Cache width and height as its very expensive to call these virtuals in inner loop (never inlined)
-	//const int32 ImageWidth = GetSizeXY().X;
-	//const int32 ImageHeight = GetSizeXY().Y;
-	//const int32 ImageWidth = FrameWidth;
-    //const int32 ImageHeight = FrameHeight;
-    //for (int32 Y = 0; Y < ImageHeight; Y++)
-	//{
-	//	FFloat16Color* SourceData = (FFloat16Color*)SurfaceData.GetData() + Y * ImageWidth;
-	//	for (int32 X = 0; X < ImageWidth; X++) {
-	//		OutImageColors[ Y * ImageWidth + X ] = SourceData[X];
-	//	}
-	//}
 }
-
-
 
 
 /*

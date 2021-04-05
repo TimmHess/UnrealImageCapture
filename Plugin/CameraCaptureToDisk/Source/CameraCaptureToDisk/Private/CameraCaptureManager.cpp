@@ -51,60 +51,92 @@ void ACameraCaptureManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	 // Read pixels once RenderFence is completed
-    if(!RenderRequestQueue.IsEmpty()){
-        // Peek the next RenderRequest from queue
-        FRenderRequestStruct* nextRenderRequest = nullptr;
-        RenderRequestQueue.Peek(nextRenderRequest);
+    if(UseFloat){
+        if(!RenderFloatRequestQueue.IsEmpty()){
+            UE_LOG(LogTemp, Warning, TEXT("Beginning to save"));
+            // Peek the next RenderRequest from queue
+            FFloatRenderRequestStruct* nextRenderRequest = nullptr;
+            RenderFloatRequestQueue.Peek(nextRenderRequest);
 
-        //int32 frameWidht = 640;
-        //int32 frameHeight = 480;
+            if(nextRenderRequest){
+                if(nextRenderRequest->RenderFence.IsFenceComplete()){
+                    // Load the image wrapper module 
+                    IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
 
-        if(nextRenderRequest){ //nullptr check
-            if(nextRenderRequest->RenderFence.IsFenceComplete()){ // Check if rendering is done, indicated by RenderFence
-
-                // Load the image wrapper module 
-                IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
-
-                // Decide storing of data, either jpeg or png
-                FString fileName = "";
-                if(UsePNG){
-                    //Generate image name
+                    FString fileName = "";
                     fileName = FPaths::ProjectSavedDir() + SubDirectoryName + "/img" + "_" + ToStringWithLeadingZeros(ImgCounter, NumDigits);
-                    fileName += ".png"; // Add file ending
+                    fileName += ".exr"; // Add file ending
 
-                    // Prepare data to be written to disk
-                    static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG); //EImageFormat::PNG //EImageFormat::JPEG
-                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::BGRA, 8);
-                    const TArray<uint8>& ImgData = imageWrapper->GetCompressed(5);
-                    RunAsyncImageSaveTask(ImgData, fileName);
-                } else{
-                    // Generate image name
-                    fileName = FPaths::ProjectSavedDir() + SubDirectoryName + "/img" + "_" + ToStringWithLeadingZeros(ImgCounter, NumDigits);
-                    fileName += ".jpeg"; // Add file ending
-
-                    // Prepare data to be written to disk
-                    static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG); //EImageFormat::PNG //EImageFormat::JPEG
-                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::BGRA, 8);
-                    const TArray<uint8>& ImgData = imageWrapper->GetCompressed(0);
-                    RunAsyncImageSaveTask(ImgData, fileName);
+                    static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR); //EImageFormat::PNG //EImageFormat::JPEG
+                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::RGBA, 16);
+                    const TArray64<uint8>& PngData = imageWrapper->GetCompressed(0);
+                    FFileHelper::SaveArrayToFile(PngData, *fileName);
                 }
-
-                if(VerboseLogging && !fileName.IsEmpty()){
-                    UE_LOG(LogTemp, Warning, TEXT("%f"), *fileName);
-                }
-
-                ImgCounter += 1;
-
-                // Delete the first element from RenderQueue
-                RenderRequestQueue.Pop();
-                delete nextRenderRequest;
-
-                UE_LOG(LogTemp, Log, TEXT("Done..."));
             }
+
+            // Delete the first element from RenderQueue
+            RenderFloatRequestQueue.Pop();
+            delete nextRenderRequest;
+
+            ImgCounter += 1;
         }
     }
 
+	// Read pixels once RenderFence is completed
+    else{
+        if(!RenderRequestQueue.IsEmpty()){
+            // Peek the next RenderRequest from queue
+            FRenderRequestStruct* nextRenderRequest = nullptr;
+            RenderRequestQueue.Peek(nextRenderRequest);
+
+            //int32 frameWidht = 640;
+            //int32 frameHeight = 480;
+
+            if(nextRenderRequest){ //nullptr check
+                if(nextRenderRequest->RenderFence.IsFenceComplete()){ // Check if rendering is done, indicated by RenderFence
+
+                    // Load the image wrapper module 
+                    IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+
+                    // Decide storing of data, either jpeg or png
+                    FString fileName = "";
+
+                    if(UsePNG){
+                        //Generate image name
+                        fileName = FPaths::ProjectSavedDir() + SubDirectoryName + "/img" + "_" + ToStringWithLeadingZeros(ImgCounter, NumDigits);
+                        fileName += ".png"; // Add file ending
+
+                        // Prepare data to be written to disk
+                        static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG); //EImageFormat::PNG //EImageFormat::JPEG
+                        imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::BGRA, 8);
+                        const TArray64<uint8>& ImgData = imageWrapper->GetCompressed(5);
+                        //const TArray<uint8>& ImgData =  static_cast<TArray<uint8, FDefaultAllocator>> (imageWrapper->GetCompressed(5));
+                        RunAsyncImageSaveTask(ImgData, fileName);
+                    } else{
+                        // Generate image name
+                        fileName = FPaths::ProjectSavedDir() + SubDirectoryName + "/img" + "_" + ToStringWithLeadingZeros(ImgCounter, NumDigits);
+                        fileName += ".jpeg"; // Add file ending
+    
+                        // Prepare data to be written to disk
+                        static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG); //EImageFormat::PNG //EImageFormat::JPEG
+                        imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::BGRA, 8);
+                        const TArray64<uint8>& ImgData = imageWrapper->GetCompressed(0);
+                        //const TArray<uint8>& ImgData = static_cast<TArray<uint8, FDefaultAllocator>> (imageWrapper->GetCompressed(0));
+                        RunAsyncImageSaveTask(ImgData, fileName);
+                    }
+                    if(VerboseLogging && !fileName.IsEmpty()){
+                        UE_LOG(LogTemp, Warning, TEXT("%f"), *fileName);
+                    }
+
+                    ImgCounter += 1;
+
+                    // Delete the first element from RenderQueue
+                    RenderRequestQueue.Pop();
+                    delete nextRenderRequest;
+                }
+            }
+        }
+    }
 }
 
 void ACameraCaptureManager::SetupCaptureComponent(){
@@ -123,8 +155,13 @@ void ACameraCaptureManager::SetupCaptureComponent(){
     renderTarget2D->InitAutoFormat(256, 256); // some random format, got crashing otherwise
     //int32 frameWidht = 640;
     //int32 frameHeight = 480;
-    renderTarget2D->InitCustomFormat(FrameWidth, FrameHeight, PF_B8G8R8A8, true); // PF_B8G8R8A8 disables HDR which will boost storing to disk due to less image information
-    renderTarget2D->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
+    
+    //renderTarget2D->InitCustomFormat(FrameWidth, FrameHeight, PF_B8G8R8A8, true); // PF_B8G8R8A8 disables HDR which will boost storing to disk due to less image information
+    //renderTarget2D->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
+    
+    renderTarget2D->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA32f;
+    renderTarget2D->InitCustomFormat(FrameWidth, FrameHeight, PF_FloatRGBA, true); // PF_B8G8R8A8 disables HDR which will boost storing to disk due to less image information
+    
     renderTarget2D->bGPUSharedFlag = true; // demand buffer on GPU
 
     // Assign RenderTarget
@@ -132,6 +169,8 @@ void ACameraCaptureManager::SetupCaptureComponent(){
 
     // Set Camera Properties
     CaptureComponent->GetCaptureComponent2D()->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+    //CaptureComponent->GetCaptureComponent2D()->CaptureSource = ESceneCaptureSource::SCS_SceneDepth;
+
     CaptureComponent->GetCaptureComponent2D()->ShowFlags.SetTemporalAA(true);
     // lookup more showflags in the UE4 documentation..
 
@@ -141,7 +180,7 @@ void ACameraCaptureManager::SetupCaptureComponent(){
     } else {
         UE_LOG(LogTemp, Log, TEXT("No PostProcessMaterial is assigend"));
     }
-
+    UE_LOG(LogTemp, Warning, TEXT("Initialized RenderTarget!"));
 }
 
 void ACameraCaptureManager::CaptureNonBlocking(){
@@ -203,6 +242,51 @@ void ACameraCaptureManager::CaptureNonBlocking(){
 
     // Set RenderCommandFence
     renderRequest->RenderFence.BeginFence();
+}
+
+
+
+void ACameraCaptureManager::CaptureFloatNonBlocking(){
+    // Get RenderContext
+    FTextureRenderTargetResource* renderTargetResource = CaptureComponent->GetCaptureComponent2D()->TextureTarget->GameThread_GetRenderTargetResource();
+
+    // Read the render target surface data back.	
+	struct FReadSurfaceFloatContext
+	{
+		FRenderTarget* SrcRenderTarget;
+		TArray<FFloat16Color>* OutData;
+		FIntRect Rect;
+		ECubeFace CubeFace;
+	};
+
+    // Init new RenderRequest
+    FFloatRenderRequestStruct* renderFloatRequest = new FFloatRenderRequestStruct();
+
+    // Setup GPU command
+	//TArray<FFloat16Color> SurfaceData;
+	FReadSurfaceFloatContext Context = {
+		renderTargetResource,
+		&(renderFloatRequest->Image),
+        //&SurfaceData,
+		FIntRect(0, 0, FrameWidth, FrameHeight),
+		ECubeFace::CubeFace_MAX //no cubeface	
+	};
+
+	ENQUEUE_RENDER_COMMAND(ReadSurfaceFloatCommand)(
+		[Context](FRHICommandListImmediate& RHICmdList) {
+			RHICmdList.ReadSurfaceFloatData(
+				Context.SrcRenderTarget->GetRenderTargetTexture(),
+				Context.Rect,
+				*Context.OutData,
+				Context.CubeFace,
+				0,
+				0
+				);
+		});
+
+    RenderFloatRequestQueue.Enqueue(renderFloatRequest);
+    renderFloatRequest->RenderFence.BeginFence();
+
 }
 
 
@@ -277,7 +361,8 @@ FString ACameraCaptureManager::ToStringWithLeadingZeros(int32 Integer, int32 Max
 
 
 
-void ACameraCaptureManager::RunAsyncImageSaveTask(TArray<uint8> Image, FString ImageName){
+void ACameraCaptureManager::RunAsyncImageSaveTask(TArray64<uint8> Image, FString ImageName){
+    UE_LOG(LogTemp, Warning, TEXT("Running Async Task"));
     (new FAutoDeleteAsyncTask<AsyncSaveImageToDiskTask>(Image, ImageName))->StartBackgroundTask();
 }
 
@@ -287,7 +372,7 @@ void ACameraCaptureManager::RunAsyncImageSaveTask(TArray<uint8> Image, FString I
 *******************************************************************
 */
 
-AsyncSaveImageToDiskTask::AsyncSaveImageToDiskTask(TArray<uint8> Image, FString ImageName){
+AsyncSaveImageToDiskTask::AsyncSaveImageToDiskTask(TArray64<uint8> Image, FString ImageName){
     ImageCopy = Image;
     FileName = ImageName;
 }
@@ -297,6 +382,7 @@ AsyncSaveImageToDiskTask::~AsyncSaveImageToDiskTask(){
 }
 
 void AsyncSaveImageToDiskTask::DoWork(){
+    UE_LOG(LogTemp, Warning, TEXT("Starting Work"));
     FFileHelper::SaveArrayToFile(ImageCopy, *FileName);
     UE_LOG(LogTemp, Log, TEXT("Stored Image: %s"), *FileName);
 }
