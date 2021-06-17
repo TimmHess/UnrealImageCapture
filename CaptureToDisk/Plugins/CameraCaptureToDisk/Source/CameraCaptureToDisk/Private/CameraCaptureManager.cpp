@@ -50,10 +50,10 @@ void ACameraCaptureManager::BeginPlay()
 void ACameraCaptureManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+    
     if(UseFloat){
+        // READ FLOAT IMAGE
         if(!RenderFloatRequestQueue.IsEmpty()){
-            UE_LOG(LogTemp, Warning, TEXT("Beginning to save"));
             // Peek the next RenderRequest from queue
             FFloatRenderRequestStruct* nextRenderRequest = nullptr;
             RenderFloatRequestQueue.Peek(nextRenderRequest);
@@ -71,17 +71,17 @@ void ACameraCaptureManager::Tick(float DeltaTime)
                     imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::RGBA, 16);
                     const TArray64<uint8>& PngData = imageWrapper->GetCompressed(0);
                     FFileHelper::SaveArrayToFile(PngData, *fileName);
+
+                     // Delete the first element from RenderQueue
+                    RenderFloatRequestQueue.Pop();
+                    delete nextRenderRequest;
+                    
+                    ImgCounter += 1;
                 }
-            }
-
-            // Delete the first element from RenderQueue
-            RenderFloatRequestQueue.Pop();
-            delete nextRenderRequest;
-
-            ImgCounter += 1;
+            }           
         }
     }
-
+    // READ UINT8 IMAGE
 	// Read pixels once RenderFence is completed
     else{
         if(!RenderRequestQueue.IsEmpty()){
@@ -89,12 +89,8 @@ void ACameraCaptureManager::Tick(float DeltaTime)
             FRenderRequestStruct* nextRenderRequest = nullptr;
             RenderRequestQueue.Peek(nextRenderRequest);
 
-            //int32 frameWidht = 640;
-            //int32 frameHeight = 480;
-
             if(nextRenderRequest){ //nullptr check
                 if(nextRenderRequest->RenderFence.IsFenceComplete()){ // Check if rendering is done, indicated by RenderFence
-
                     // Load the image wrapper module 
                     IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
 
@@ -127,7 +123,7 @@ void ACameraCaptureManager::Tick(float DeltaTime)
                     if(VerboseLogging && !fileName.IsEmpty()){
                         UE_LOG(LogTemp, Warning, TEXT("%f"), *fileName);
                     }
-
+                    
                     ImgCounter += 1;
 
                     // Delete the first element from RenderQueue
@@ -148,29 +144,26 @@ void ACameraCaptureManager::SetupCaptureComponent(){
     // Create RenderTargets
     UTextureRenderTarget2D* renderTarget2D = NewObject<UTextureRenderTarget2D>();
 
-    // Set FrameWidth and FrameHeight
-    renderTarget2D->TargetGamma = GEngine->GetDisplayGamma(); //1.2f; // for Vulkan //GEngine->GetDisplayGamma(); // for DX11/12
-
-    // Setup the RenderTarget capture format
-    renderTarget2D->InitAutoFormat(256, 256); // some random format, got crashing otherwise
-    //int32 frameWidht = 640;
-    //int32 frameHeight = 480;
-    
-    //renderTarget2D->InitCustomFormat(FrameWidth, FrameHeight, PF_B8G8R8A8, true); // PF_B8G8R8A8 disables HDR which will boost storing to disk due to less image information
-    //renderTarget2D->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
-    
-    renderTarget2D->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA32f;
-    renderTarget2D->InitCustomFormat(FrameWidth, FrameHeight, PF_FloatRGBA, true); // PF_B8G8R8A8 disables HDR which will boost storing to disk due to less image information
+    // Float Capture
+    if(UseFloat){
+        renderTarget2D->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA32f;
+        renderTarget2D->InitCustomFormat(FrameWidth, FrameHeight, PF_FloatRGBA, true); // PF_B8G8R8A8 disables HDR which will boost storing to disk due to less image information
+        UE_LOG(LogTemp, Warning, TEXT("Set Render Format for DepthCapture.."));
+    }
+    // Color Capture
+    else{
+        renderTarget2D->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8; //8-bit color format
+        renderTarget2D->InitCustomFormat(FrameWidth, FrameHeight, PF_B8G8R8A8, true); // PF... disables HDR, which is most important since HDR gives gigantic overhead, and is not needed!
+        UE_LOG(LogTemp, Warning, TEXT("Set Render Format for Color-Like-Captures"));
+    }
     
     renderTarget2D->bGPUSharedFlag = true; // demand buffer on GPU
 
     // Assign RenderTarget
     CaptureComponent->GetCaptureComponent2D()->TextureTarget = renderTarget2D;
-
     // Set Camera Properties
     CaptureComponent->GetCaptureComponent2D()->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
-    //CaptureComponent->GetCaptureComponent2D()->CaptureSource = ESceneCaptureSource::SCS_SceneDepth;
-
+    CaptureComponent->GetCaptureComponent2D()->TextureTarget->TargetGamma = GEngine->GetDisplayGamma();
     CaptureComponent->GetCaptureComponent2D()->ShowFlags.SetTemporalAA(true);
     // lookup more showflags in the UE4 documentation..
 
@@ -188,21 +181,22 @@ void ACameraCaptureManager::CaptureNonBlocking(){
         UE_LOG(LogTemp, Error, TEXT("CaptureColorNonBlocking: CaptureComponent was not valid!"));
         return;
     }
-
-    CaptureComponent->GetCaptureComponent2D()->TextureTarget->TargetGamma = GEngine->GetDisplayGamma();
+    UE_LOG(LogTemp, Warning, TEXT("Entering: CaptureNonBlocking"));
+    CaptureComponent->GetCaptureComponent2D()->TextureTarget->TargetGamma = 1.2f;//GEngine->GetDisplayGamma();
 
     // Get RenderConterxt
     FTextureRenderTargetResource* renderTargetResource = CaptureComponent->GetCaptureComponent2D()->TextureTarget->GameThread_GetRenderTargetResource();
-
+    UE_LOG(LogTemp, Warning, TEXT("Got display gamma"));
     struct FReadSurfaceContext{
         FRenderTarget* SrcRenderTarget;
         TArray<FColor>* OutData;
         FIntRect Rect;
         FReadSurfaceDataFlags Flags;
     };
-
+    UE_LOG(LogTemp, Warning, TEXT("Inited ReadSurfaceContext"));
     // Init new RenderRequest
     FRenderRequestStruct* renderRequest = new FRenderRequestStruct();
+    UE_LOG(LogTemp, Warning, TEXT("inited renderrequest"));
 
     // Setup GPU command
     FReadSurfaceContext readSurfaceContext = {
@@ -211,9 +205,10 @@ void ACameraCaptureManager::CaptureNonBlocking(){
         FIntRect(0,0,renderTargetResource->GetSizeXY().X, renderTargetResource->GetSizeXY().Y),
         FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX)
     };
+    UE_LOG(LogTemp, Warning, TEXT("GPU Command complete"));
 
     // Send command to GPU
-   /* Up to version 4.22 use this
+    /* Up to version 4.22 use this
     ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER(
         SceneDrawCompletion,//ReadSurfaceCommand,
         FReadSurfaceContext, Context, readSurfaceContext,
@@ -244,9 +239,13 @@ void ACameraCaptureManager::CaptureNonBlocking(){
     renderRequest->RenderFence.BeginFence();
 }
 
-
-
 void ACameraCaptureManager::CaptureFloatNonBlocking(){
+    // Initial Check
+    if(!UseFloat){
+        UE_LOG(LogTemp, Error, TEXT("Called CaptureFloatNonBlocking but UseFloat is false! Will omit this call to prevent crashes!"));
+        return;
+    }
+
     // Get RenderContext
     FTextureRenderTargetResource* renderTargetResource = CaptureComponent->GetCaptureComponent2D()->TextureTarget->GameThread_GetRenderTargetResource();
 
@@ -286,96 +285,7 @@ void ACameraCaptureManager::CaptureFloatNonBlocking(){
 
     RenderFloatRequestQueue.Enqueue(renderFloatRequest);
     renderFloatRequest->RenderFence.BeginFence();
-
-	//FlushRenderingCommands();
-
-    ////////////////////
-
-
-    /*
-    IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
-    FString fileName = "";
-    fileName = FPaths::ProjectSavedDir() + SubDirectoryName + "/img" + "_" + ToStringWithLeadingZeros(ImgCounter, NumDigits);
-    fileName += ".exr"; // Add file ending
-
-    static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR); //EImageFormat::PNG //EImageFormat::JPEG
-    imageWrapper->SetRaw(renderFloatRequest->Image.GetData(), renderFloatRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::RGBA, 16);
-    const TArray64<uint8>& PngData = imageWrapper->GetCompressed(0);
-    FFileHelper::SaveArrayToFile(PngData, *fileName);
-    UE_LOG(LogTemp, Warning, TEXT("Saving Complete"));
-    */
-
-
-    ///////////////////////
-
-	// Copy the surface data into the output array.
-	//FFloat16Color* OutImageColors = reinterpret_cast<FFloat16Color*> (OutImageData);
-
-	// Cache width and height as its very expensive to call these virtuals in inner loop (never inlined)
-	//const int32 ImageWidth = GetSizeXY().X;
-	//const int32 ImageHeight = GetSizeXY().Y;
-	//const int32 ImageWidth = FrameWidth;
-    //const int32 ImageHeight = FrameHeight;
-    //for (int32 Y = 0; Y < ImageHeight; Y++)
-	//{
-	//	FFloat16Color* SourceData = (FFloat16Color*)SurfaceData.GetData() + Y * ImageWidth;
-	//	for (int32 X = 0; X < ImageWidth; X++) {
-	//		OutImageColors[ Y * ImageWidth + X ] = SourceData[X];
-	//	}
-	//}
 }
-
-
-
-
-/*
-void ACameraCaptureManager::SpawnSegmentationCaptureComponent(ASceneCapture2D* ColorCapture){
-	if(!IsValid(ColorCapture)){
-        UE_LOG(LogTemp, Error, TEXT("CaptureColorNonBlocking: CaptureComponent was not valid!"));
-        return;
-    }
-
-    // Spawning a new SceneCaptureComponent
-    ASceneCapture2D* newSegmentationCapture = (ASceneCapture2D*) GetWorld()->SpawnActor<ASceneCapture2D>(ASceneCapture2D::StaticClass());
-    if(!newSegmentationCapture){ // nullptr check
-        UE_LOG(LogTemp, Error, TEXT("Failed to spawn SegmentationComponent"));
-        return;
-    }
-    // Register new CaptureComponent to game
-    newSegmentationCapture->GetCaptureComponent2D()->RegisterComponent();
-    // Attach SegmentationCaptureComponent to match ColorCaptureComponent
-    newSegmentationCapture->AttachToActor(ColorCapture, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-
-    // Get values from "parent" ColorCaptureComponent
-    newSegmentationCapture->GetCaptureComponent2D()->FOVAngle = ColorCapture->GetCaptureComponent2D()->FOVAngle;
-
-    // Set pointer to new segmentation capture component
-    SegmentationCapture = newSegmentationCapture;
-
-    UE_LOG(LogTemp, Warning, TEXT("Done..."));
-}
-*/
-/*
-void ACameraCaptureManager::SetupSegmentationCaptureComponent(ASceneCapture2D* ColorCapture){
-	if(!IsValid(ColorCapture)){
-        UE_LOG(LogTemp, Error, TEXT("CaptureColorNonBlocking: CaptureComponent was not valid!"));
-        return;
-    }
-
-    // Spawn SegmentaitonCaptureComponents
-    SpawnSegmentationCaptureComponent(ColorCapture);
-
-    // Setup SegmentationCaptureComponent
-    SetupColorCaptureComponent(SegmentationCapture);
-
-    // Assign PostProcess Material
-    if(PostProcessMaterial){ // check nullptr
-        SegmentationCapture->GetCaptureComponent2D()->AddOrUpdateBlendable(PostProcessMaterial);
-    } else {
-        UE_LOG(LogTemp, Error, TEXT("PostProcessMaterial was nullptr!"));
-    }
-}
-*/
 
 FString ACameraCaptureManager::ToStringWithLeadingZeros(int32 Integer, int32 MaxDigits){
     FString result = FString::FromInt(Integer);
@@ -394,10 +304,6 @@ FString ACameraCaptureManager::ToStringWithLeadingZeros(int32 Integer, int32 Max
 
     return result;
 }
-
-
-
-
 
 void ACameraCaptureManager::RunAsyncImageSaveTask(TArray64<uint8> Image, FString ImageName){
     UE_LOG(LogTemp, Warning, TEXT("Running Async Task"));
