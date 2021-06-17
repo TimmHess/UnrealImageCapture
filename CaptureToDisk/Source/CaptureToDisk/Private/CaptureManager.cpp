@@ -22,11 +22,6 @@
 
 #include "Modules/ModuleManager.h"
 
-
-// Static ImageWrapperModule to prevent reloading -> this thing does not like to be reloaded..
-//static IImageWrapperModule &ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
-
-
 // Sets default values
 ACaptureManager::ACaptureManager()
 {
