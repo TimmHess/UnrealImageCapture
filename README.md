@@ -1,26 +1,31 @@
-# Image Capturing With UnrealEngine4 For Deep Learning
+# Image Capturing With UnrealEngine 4 or 5 For Deep Learning
 
 
 ![alt text](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/CaptureResult.png)
 
+#
+__To review the code please find it in the Plugin directory!__ (The CaptureToDisk is currently not up to date, I will try to find time to fix this in the near future!)
 
 # A Small Introduction
-UnrealEngine4 is known to be a powerful tool to create virtual worlds as it is a highly valued AAA production game engine. Generating temporally consistent data with automatic pixel-wise annotations from complex scenes, such as traffic scenarios, is a capability worth leveraging, especially for training and validation of machine learning, or more explicitly deep learning, applications, and has been explored in a variety of projects already. Already, there are plugins available that allow rendering images from UE4 to disk at runtime, such as prominently [UnrealCV](https://unrealcv.org/) and [AirSim](https://github.com/microsoft/AirSim). This repository aims to be a tutorial that demonstrates such an 'image capturing' mechanism in detail fo you to understand its inner workings, and in turn enable you to reuse it in a custom fashions that suit the needs of your project. 
+UnrealEngine is known to be a powerful tool to create virtual worlds as it is a highly valued AAA production game engine. Generating temporally consistent data with automatic pixel-wise annotations from complex scenes, such as traffic scenarios, is a capability worth leveraging, especially for training and validation of machine learning, or more explicitly deep learning, applications, and has been explored in a variety of projects already. Already, there are plugins available that allow rendering images from UE4 to disk at runtime, such as prominently [UnrealCV](https://unrealcv.org/) and [AirSim](https://github.com/microsoft/AirSim). This repository aims to be a tutorial that demonstrates such an 'image capturing' mechanism in detail fo you to understand its inner workings, and in turn enable you to reuse it in a custom fashions that suit the needs of your project. 
 
-*When I was setting up scenes for my research the formerly mentioned plugins were just not yet supporting the latest engine versions I wanted/needed to use, and also I was missing a place where the knowledge of how to render images to disk myself was explains for non-advanced graphics-programmers. Of course, there are lots of sources for code available online and also there are community blog-entries scattered across multiple platforms explaining parts of the problem as well as possible solutions, even though they typically are targeted for different issues.*
-In this repository I want to condense my findings on how to implement a component to capture images to disk from an arbitrary UE4 scene **from scratch** lowering the bar for UE4 beginners. This will include:\
-* Rendering images at high FPS without blocking the UE4 rendering thread
+*When I was setting up scenes for my research the formerly mentioned plugins were just not yet supporting the latest engine versions I wanted/needed to use, and also I was missing a place where the knowledge of how to render images to disk myself was explains for non-advanced graphics-programmers. Of course, there are lots of sources for code available online and also there are community blog-entries scattered across multiple platforms explaining parts of the problem as well as possible solutions, even though they typically are targeting different issues.*
+
+In this repository I want to condense my findings on how to implement a component to capture images to disk from an arbitrary UE4 (which fortunately apply likewise to UE5) scene **from scratch** lowering the bar for UE novices. This will include:
+* Rendering images at high FPS without blocking the UE rendering thread
 * Rendering segmentation (or other graphics buffers) at the same time
+ 
 
-**Disclaimer: I do not own any of the code. I merely condensed the sources already available online for easier use and provide an overview to the general functionality of this particular approach!**\
+**Disclaimer: I do not own any of the code. Merely, IO condensed the sources already available online for easier use and provide an overview to the general functionality of this particular approach!**
+
 **Kudos to the UE4 AnswerHub community!**
 
 # Plugin Support
-The general idea of this repository is to communicate a possible setup for custom image capturing in code. This shall provide a baseline for further development to adapt the code to ones individual needs. I understand that Unreal's Blueprint interface is powerful and some people have their reasons not to dive into C++ development with UE4.
+The general idea of this repository is to communicate a possible setup for custom image capturing in code. This shall provide a baseline for further development to adapt the code to ones individual needs. 
 
-This is why now there is also a **Plugin** version of the code available. It generally provides the same functionality as the tutorial code and is structured in the same way, with minor tweaks for more straight-forward use in blueprints.
+I understand that Unreal's Blueprint interface is powerful and some people have their reasons not to dive into C++ development with UE.
 
-It comes with open sources so that everybody may compile it for their platform. (Only Win64 Engine version 4.22 binaries are included, more will follow soon (hopefully...))
+This is why now there is also a **Plugin** version of the code available. However, it will still need you to have a C++ project rather than Bluerpint-onle.
 
 To incorporate the Plugin in to your project: Create a **Plugins** directory in your project and copy the ```\UnrealImageCapture\Plugins\CameraCaptureToDisk``` directory. Load the plugin in your project, if not automatically done by the editor, and place the `CameraCaptureManager_BP`, which is to be found in the plugin's contents, in the scene and fill in its required slots as depicted below. This will require you to place a ```SceneCapture2D``` in your scene.
 A ```PostProcessMaterial``` for segmentation is also located in the plugin's contents.
@@ -41,7 +46,7 @@ I will go through the code step-by-step so that hopefully it will be easier to i
 ## Prerequisite
 You will need a UE4 (or UE5) C++ project. 
 
-Also, you might have to add a few packages to your `'YourProjectName'.Build.cs` file. These are already included into UnrealEngine, however, sometimes they are not added automatically, resulting in unpleasant linker errors. Find the `'YourProjectName'.Build.cs` file in the `Source/'YourProjectName/` directory, and add or extend it to include all modules listed in the following line:
+Also, you might have to add a few packages to your `'YourProjectName'.Build.cs` file. These are part of UnrealEngine, however, sometimes they are not added automatically resulting in unpleasant linker errors. Find the `'YourProjectName'.Build.cs` file in the `Source/'YourProjectName/` directory, and add or extend it to include all modules listed in the following line:
 
 ``` cpp
 PublicDependencyModuleNames.AddRange(new string[] {"Core", "CoreUObject", "Engine", "InputCore", "ImageWrapper", "RenderCore", "Renderer", "RHI" });
@@ -51,7 +56,7 @@ PublicDependencyModuleNames.AddRange(new string[] {"Core", "CoreUObject", "Engin
 ## Setup A ColorCapture Component
 I am using a ```SceneCaptureComponent2D``` as the basis for capturing images. Placing one of these into your scene will give you an ```ASceneCaptureComponent``` which is its `Actor` instance. It basically behaves like any other camera component, but its viewport is not restricted by your computer's monitor or main camera viewport. This provides us the possibility to render images of arbitrary resolution independent from the actual screen resolution.
 
-# 
+#
 
 > Add a ```CaptureManager``` class of type Actor to your project.
 
@@ -157,100 +162,73 @@ This addition will come with the price of needing to handle 'waiting times' befo
 
 [...]
 
-USTRUCT()
 struct FRenderRequest{
-    GENERATED_BODY()
-
-    TArray<FColor> Image;
+    FIntPoint ImageSize;
+    FRHIGPUTextureReadback Readback;
     FRenderCommandFence RenderFence;
-    bool isPNG;
 
-    FRenderRequest(){
-        isPNG = false;
-    }
+    FRenderRequest(
+        const FIntPoint& ImageSize,
+        const FRHIGPUTextureReadback& Readback) :
+            ImageSize(ImageSize),
+            Readback(Readback) {}
 };
 
 [...]
-UCLASS()
+UCLASS(Blueprintable)
 class ...
 [...]
 ```
-The ```Image``` will be the color buffer our `CaptureComponent` writes to. ```RenderFence``` is a neat feature of UE4 letting you put a 'fence' into the render pipeline that can be checked to notify when it has passed the full pipeline. This gives a way to determine whether our render command has passed as well. The ```isPNG``` flag will be important later when we want to also store semantic labels which should not be stored as JPEG as the compression introduces artifacts into the color/label data...
 
-> We need to add our ```TQueue```, keeping track of our render requests:
+The ```FRHIGPUTextureReadback``` will hold the rendered results, e.g. color or depth values. The ```RenderFence``` is a neat feature of UE, letting you put a 'fence' into the render pipeline that can be checked to notify when it has passed the full pipeline. This gives a way to determine whether our render command has passed as well.
+
+> We need to add a ```TQueue``` as a data structure to keep track of our render requests:
 
 **CaptureManger.h**
 
 ``` cpp
 protected:
     // RenderRequest Queue
-    TQueue<FRenderRequest*> RenderRequestQueue;
+    TQueue<TSharedPtr<FRenderRequest>> RenderRequestQueue;
 ```
 
 #
 ## Implement the image capturing function: 
-This function will place a render request on the UE4 rendering pipeline asking the data captured from our `CaptureComponent` to be copied in our Image buffer so that we can further process it in `GameThread`.
+This function will place a render request on the UE rendering pipeline asking the data captured from our `CaptureComponent` to be copied in our Image buffer so that we can further process it in `GameThread`.
 
 **CaptureManger.h**
 
 ``` cpp
 public:
     UFUNCTION(BlueprintCallable, Category = "ImageCapture")
-    void CaptureColorNonBlocking(ASceneCapture2D* CaptureComponent, bool IsSegmentation=false);
+    void CaptureNonBlocking();
 ```
 
 **CaptureManger.cpp**
 
 ``` cpp
-void ACaptureManager::CaptureColorNonBlocking(ASceneCapture2D* CaptureComponent, bool IsSegmentation){
-    // Get RenderContext
+void ACaptureManager::CaptureNonBlocking(){
+    if(!IsValid(CaptureComponent)){
+        UE_LOG(LogTemp, Error, TEXT("CaptureColorNonBlocking: CaptureComponent was not valid!"));
+        return;
+    }
+
+    CaptureComponent->GetCaptureComponent2D()->TextureTarget->TargetGamma = GEngine->GetDisplayGamma();
+
+    // Get RenderConterxt
     FTextureRenderTargetResource* renderTargetResource = CaptureComponent->GetCaptureComponent2D()->TextureTarget->GameThread_GetRenderTargetResource();
 
-    struct FReadSurfaceContext{
-        FRenderTarget* SrcRenderTarget;
-        TArray<FColor>* OutData;
-        FIntRect Rect;
-        FReadSurfaceDataFlags Flags;
-    };
-
     // Init new RenderRequest
-    FRenderRequest* renderRequest = new FRenderRequest();
-    renderRequest->isPNG = IsSegmentation;
-
-    // Setup GPU command
-    FReadSurfaceContext readSurfaceContext = {
-        renderTargetResource,
-        &(renderRequest->Image),
-        FIntRect(0,0,renderTargetResource->GetSizeXY().X,          renderTargetResource->GetSizeXY().Y),
-        FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX)
-    };
+    TSharedPtr<FRenderRequestStruct> renderRequest = MakeShared<FRenderRequestStruct>(renderTargetResource->GetSizeXY(), FRHIGPUTextureReadback(TEXT("CameraCaptureManagerReadback")));
 
     // Send command to GPU
-   /* Up to version 4.22 use this
-    ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER(
-        SceneDrawCompletion,//ReadSurfaceCommand,
-        FReadSurfaceContext, Context, readSurfaceContext,
-    {
-        RHICmdList.ReadSurfaceData(
-            Context.SrcRenderTarget->GetRenderTargetTexture(),
-            Context.Rect,
-            *Context.OutData,
-            Context.Flags
-        );
-    });
-    */
-    // Above 4.22 use this
     ENQUEUE_RENDER_COMMAND(SceneDrawCompletion)(
-    [readSurfaceContext](FRHICommandListImmediate& RHICmdList){
-        RHICmdList.ReadSurfaceData(
-            readSurfaceContext.SrcRenderTarget->GetRenderTargetTexture(),
-            readSurfaceContext.Rect,
-            *readSurfaceContext.OutData,
-            readSurfaceContext.Flags
-        );
+    [renderTargetResource](FRHICommandListImmediate& RHICmdList) {
+        FTexture2DRHIRef Target = renderTargetResource->GetRenderTargetTexture();
+        RenderRequest->Readback.EnqueueCopy(RHICmdList, Target);
     });
 
-    // Notify new task in RenderQueue
+    // Notifiy new task in RenderQueue
     RenderRequestQueue.Enqueue(renderRequest);
 
     // Set RenderCommandFence
@@ -262,9 +240,9 @@ With this, the image data is already stored in our queue, and we now need to sto
 
 # 
 ## Save Image Data to Disk
-To do so, in each tick of the `CaptureManager` we look up the first element of the `RenderQueue`, if its `RenderFence` is completed then we save the image to disk, else we do nothing.
+To do so, in each tick of the `CaptureManager` we look up the first element of the `RenderQueue`, if it's `RenderFence` is completed and also whether the data is ready to read. Only if both check-out true, we proceed with saving the image to disk.
 
-The last thing we need is a procedure to write to disk, preferably without blocking our `GameThread`. 
+The last thing we need is a procedure to write the data to disk, preferably without blocking our `GameThread`. 
 >We implement an [asynchronous](https://wiki.unrealengine.com/Using_AsyncTasks) procedure storing the data to disk.
 
 **CaptureManager.h**
@@ -344,59 +322,73 @@ public:
 **CaptureManager.cpp**
 ``` cpp
 // Called every frame
-void ACaptureManager::Tick(float DeltaTime)
+void ACameraCaptureManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-    // Read pixels once RenderFence is completed
+	 // Read pixels once RenderFence is completed
     if(!RenderRequestQueue.IsEmpty()){
         // Peek the next RenderRequest from queue
-        FRenderRequest* nextRenderRequest = nullptr;
-        RenderRequestQueue.Peek(nextRenderRequest);
+        TSharedPtr<FRenderRequestStruct> nextRenderRequest = *RenderRequestQueue.Peek();
 
-        int32 frameWidth = 640;
-        int32 frameHeight = 480;
+        //int32 frameWidht = 640;
+        //int32 frameHeight = 480;
 
         if(nextRenderRequest){ //nullptr check
-            if(nextRenderRequest->RenderFence.IsFenceComplete()){ // Check if rendering is done, indicated by RenderFence
+            if(nextRenderRequest->RenderFence.IsFenceComplete() && nextRenderRequest->Readback.IsReady()) { // Check if rendering is done, indicated by RenderFence & Readback
+
+                // Load the image wrapper module 
+                IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+
+                // Get Data from Readback
+                int64 RawSize = nextRenderRequest->ImageSize.X * nextRenderRequest->ImageSize.Y * sizeof(FColor);
+                void* RawData = nextRenderRequest->Readback.Lock(RawSize);
+
+
                 // Decide storing of data, either jpeg or png
-                if(nextRenderRequest->isPNG){
+                FString fileName = "";
+                if(UsePNG){
                     //Generate image name
-                    FString fileName = FPaths::ProjectSavedDir();
+                    fileName = FPaths::ProjectSavedDir() + SubDirectoryName + "/img" + "_" + ToStringWithLeadingZeros(ImgCounter, NumDigits);
                     fileName += ".png"; // Add file ending
 
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG); //EImageFormat::PNG //EImageFormat::JPEG
-                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidth, frameHeight, ERGBFormat::BGRA, 8);
-                    const TArray64<uint8>& ImgData = imageWrapper->GetCompressed(5);
+                    imageWrapper->SetRaw(RawData, RawSize, FrameWidth, FrameHeight, ERGBFormat::BGRA, 8);
+                    const TArray<uint8>& ImgData = imageWrapper->GetCompressed(5);
                     RunAsyncImageSaveTask(ImgData, fileName);
                 } else{
-                    UE_LOG(LogTemp, Log, TEXT("Started Saving Color Image"));
                     // Generate image name
-                    FString fileName = FPaths::ProjectSavedDir();
+                    fileName = FPaths::ProjectSavedDir() + SubDirectoryName + "/img" + "_" + ToStringWithLeadingZeros(ImgCounter, NumDigits);
                     fileName += ".jpeg"; // Add file ending
 
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG); //EImageFormat::PNG //EImageFormat::JPEG
-                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidth, frameHeight, ERGBFormat::BGRA, 8);
-                    const TArray64<uint8>& ImgData = imageWrapper->GetCompressed(0);
+                    imageWrapper->SetRaw(RawData, RawSize, FrameWidth, FrameHeight, ERGBFormat::BGRA, 8);
+                    const TArray<uint8>& ImgData = imageWrapper->GetCompressed(0);
                     RunAsyncImageSaveTask(ImgData, fileName);
                 }
 
+                if(VerboseLogging && !fileName.IsEmpty()){
+                    UE_LOG(LogTemp, Warning, TEXT("%f"), *fileName);
+                }
+
+                ImgCounter += 1;
+
                 // Delete the first element from RenderQueue
                 RenderRequestQueue.Pop();
-                delete nextRenderRequest;
 
                 UE_LOG(LogTemp, Log, TEXT("Done..."));
             }
         }
     }
+
 }
 ```
 
 # 
 
-For testing purposes we can call the `CaptureColorNonBlocking()` from the `LevelBlueprint` by attaching it to a button pressed event.
+For testing purposes we can call the `CaptureColorBlocking()` from the `LevelBlueprint` by attaching it to a button pressed event.
 
 [Image of the level blueprint]
 
