@@ -10,19 +10,16 @@ class UMaterial;
 #include "Containers/Queue.h"
 #include "CameraCaptureManager.generated.h"
 
-
-
-
-USTRUCT()
 struct FRenderRequestStruct{
-    GENERATED_BODY()
-
-    TArray<FColor> Image;
+    FIntPoint ImageSize;
+    FRHIGPUTextureReadback Readback;
     FRenderCommandFence RenderFence;
 
-    FRenderRequestStruct(){
-
-    }
+    FRenderRequestStruct(
+        const FIntPoint& ImageSize,
+        const FRHIGPUTextureReadback& Readback) :
+            ImageSize(ImageSize),
+            Readback(Readback) {}
 };
 
 
@@ -67,7 +64,7 @@ public:
 
 protected:
 	// RenderRequest Queue
-    TQueue<FRenderRequestStruct*> RenderRequestQueue;
+    TQueue<TSharedPtr<FRenderRequestStruct>> RenderRequestQueue;
 
     int ImgCounter = 0;
 

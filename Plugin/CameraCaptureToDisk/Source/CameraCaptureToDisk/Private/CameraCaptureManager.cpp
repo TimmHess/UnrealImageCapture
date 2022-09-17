@@ -54,17 +54,21 @@ void ACameraCaptureManager::Tick(float DeltaTime)
 	 // Read pixels once RenderFence is completed
     if(!RenderRequestQueue.IsEmpty()){
         // Peek the next RenderRequest from queue
-        FRenderRequestStruct* nextRenderRequest = nullptr;
-        RenderRequestQueue.Peek(nextRenderRequest);
+        TSharedPtr<FRenderRequestStruct> nextRenderRequest = *RenderRequestQueue.Peek();
 
         //int32 frameWidht = 640;
         //int32 frameHeight = 480;
 
         if(nextRenderRequest){ //nullptr check
-            if(nextRenderRequest->RenderFence.IsFenceComplete()){ // Check if rendering is done, indicated by RenderFence
+            if(nextRenderRequest->RenderFence.IsFenceComplete() && nextRenderRequest->Readback.IsReady()) { // Check if rendering is done, indicated by RenderFence & Readback
 
                 // Load the image wrapper module 
                 IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+
+                // Get Data from Readback
+                int64 RawSize = nextRenderRequest->ImageSize.X * nextRenderRequest->ImageSize.Y * sizeof(FColor);
+                void* RawData = nextRenderRequest->Readback.Lock(RawSize);
+
 
                 // Decide storing of data, either jpeg or png
                 FString fileName = "";
@@ -75,7 +79,7 @@ void ACameraCaptureManager::Tick(float DeltaTime)
 
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG); //EImageFormat::PNG //EImageFormat::JPEG
-                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::BGRA, 8);
+                    imageWrapper->SetRaw(RawData, RawSize, FrameWidth, FrameHeight, ERGBFormat::BGRA, 8);
                     const TArray<uint8>& ImgData = imageWrapper->GetCompressed(5);
                     RunAsyncImageSaveTask(ImgData, fileName);
                 } else{
@@ -85,7 +89,7 @@ void ACameraCaptureManager::Tick(float DeltaTime)
 
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::JPEG); //EImageFormat::PNG //EImageFormat::JPEG
-                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::BGRA, 8);
+                    imageWrapper->SetRaw(RawData, RawSize, FrameWidth, FrameHeight, ERGBFormat::BGRA, 8);
                     const TArray<uint8>& ImgData = imageWrapper->GetCompressed(0);
                     RunAsyncImageSaveTask(ImgData, fileName);
                 }
@@ -98,7 +102,6 @@ void ACameraCaptureManager::Tick(float DeltaTime)
 
                 // Delete the first element from RenderQueue
                 RenderRequestQueue.Pop();
-                delete nextRenderRequest;
 
                 UE_LOG(LogTemp, Log, TEXT("Done..."));
             }
@@ -155,23 +158,8 @@ void ACameraCaptureManager::CaptureNonBlocking(){
     // Get RenderConterxt
     FTextureRenderTargetResource* renderTargetResource = CaptureComponent->GetCaptureComponent2D()->TextureTarget->GameThread_GetRenderTargetResource();
 
-    struct FReadSurfaceContext{
-        FRenderTarget* SrcRenderTarget;
-        TArray<FColor>* OutData;
-        FIntRect Rect;
-        FReadSurfaceDataFlags Flags;
-    };
-
     // Init new RenderRequest
-    FRenderRequestStruct* renderRequest = new FRenderRequestStruct();
-
-    // Setup GPU command
-    FReadSurfaceContext readSurfaceContext = {
-        renderTargetResource,
-        &(renderRequest->Image),
-        FIntRect(0,0,renderTargetResource->GetSizeXY().X, renderTargetResource->GetSizeXY().Y),
-        FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX)
-    };
+    TSharedPtr<FRenderRequestStruct> renderRequest = MakeShared<FRenderRequestStruct>(renderTargetResource->GetSizeXY(), FRHIGPUTextureReadback(TEXT("CameraCaptureManagerReadback")));
 
     // Send command to GPU
    /* Up to version 4.22 use this
@@ -189,13 +177,9 @@ void ACameraCaptureManager::CaptureNonBlocking(){
     */
     // Above 4.22 use this
     ENQUEUE_RENDER_COMMAND(SceneDrawCompletion)(
-    [readSurfaceContext](FRHICommandListImmediate& RHICmdList){
-        RHICmdList.ReadSurfaceData(
-            readSurfaceContext.SrcRenderTarget->GetRenderTargetTexture(),
-            readSurfaceContext.Rect,
-            *readSurfaceContext.OutData,
-            readSurfaceContext.Flags
-        );
+    [renderTargetResource](FRHICommandListImmediate& RHICmdList) {
+        FTexture2DRHIRef Target = renderTargetResource->GetRenderTargetTexture();
+        RenderRequest->Readback.EnqueueCopy(RHICmdList, Target);
     });
 
     // Notifiy new task in RenderQueue
