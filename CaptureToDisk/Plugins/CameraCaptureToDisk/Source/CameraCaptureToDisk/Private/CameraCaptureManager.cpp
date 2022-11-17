@@ -68,7 +68,7 @@ void ACameraCaptureManager::Tick(float DeltaTime)
                     fileName += ".exr"; // Add file ending
 
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR); //EImageFormat::PNG //EImageFormat::JPEG
-                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::RGBA, 16);
+                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::RGBAF, 16);
                     const TArray64<uint8>& PngData = imageWrapper->GetCompressed(0);
                     FFileHelper::SaveArrayToFile(PngData, *fileName);
 
