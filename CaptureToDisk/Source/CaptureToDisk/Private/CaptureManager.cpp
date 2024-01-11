@@ -69,7 +69,29 @@ void ACaptureManager::Tick(float DeltaTime)
 
                     // Prepare data to be written to disk
                     static TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG); //EImageFormat::PNG //EImageFormat::JPEG
-                    imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidht, frameHeight, ERGBFormat::BGRA, 8);
+                    //imageWrapper->SetRaw(nextRenderRequest->Image.GetData(), nextRenderRequest->Image.GetAllocatedSize(), frameWidht, frameHeight, ERGBFormat::BGRA, 8);
+
+                    // Assuming nextRenderRequest->Image is a TArray<FColor>
+                    TArray<FColor> colors = nextRenderRequest->Image;
+                    TArray<uint8> imageData;
+                    imageData.Reserve(colors.Num() * 4); // Reserve space for R, G, B, and A for each pixel
+
+                    for (const FColor& color : colors)
+                    {
+                        imageData.Add(color.R);
+                        imageData.Add(color.G);
+                        imageData.Add(color.B);
+                        imageData.Add(color.A);
+                    }   
+
+                    // Set the alpha value to 255 (or 1.0f in normalized format)
+                    for (int32 i = 0; i < imageData.Num(); i += 4) {
+                        imageData[i + 3] = 255;
+                    }   
+
+                    // Set the modified image data
+                    imageWrapper->SetRaw(imageData.GetData(), imageData.GetAllocatedSize(), FrameWidth, FrameHeight, ERGBFormat::BGRA, 8); 
+
                     const TArray64<uint8>& ImgData = imageWrapper->GetCompressed(5);
                     RunAsyncImageSaveTask(ImgData, fileName);
                 } else{
