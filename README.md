@@ -1,4 +1,4 @@
-# Image Capturing With UnrealEngine 4 or 5 (for deep learning)
+# Image Capturing With UnrealEngine 5.5 (for deep learning)
 
 
 | Color | Segmentation |
@@ -15,18 +15,18 @@
 # Outline
 - [Introduction](#a-small-introduction)
 - [MAIN: How to Save Images to Disk (without blocking the main threads)](#how-to-save-images-to-disk-in-ue5-without-blocking-the-rendering-or-main-thread)
-- [Capturing Object Pixel-Annotations (segmentation mask)]()
-- [Capturing Scene Depth](#capturing)
-- [Enable Lumen on SceneCapture2D]()
+- [Capturing Object Pixel-Annotations (segmentation mask)](#capturing-annotations)
+- [Capturing Scene Depth](#setup-a-depth-capture)
+- [Enable Lumen on SceneCapture2D](#enable-lumen-on-scenecapture2d)
 - [Known Issues](#known-issues)
 
 # TLDR
-Use these links to the [FrameCaptureManger.h]() and [FrameCaptureManger.cpp]() file. They are the only source needed.
-Plus, make sure to link the correct unreal-libs to your project - check the [prerequisite](#prerequisite) or [CaptureToDisk.Build.cs]().
+Use these links to the [FrameCaptureManger.h](https://github.com/TimmHess/UnrealImageCapture/blob/master/CaptureToDisk/Source/CaptureToDisk/Public/FrameCaptureManager.h) and [FrameCaptureManger.cpp](https://github.com/TimmHess/UnrealImageCapture/blob/master/CaptureToDisk/Source/CaptureToDisk/Private/FrameCaptureManager.cpp) file. They are the only source needed.
+Plus, make sure to link the correct unreal-libs to your project - check the [prerequisite](#prerequisite) or [CaptureToDisk.Build.cs](https://github.com/TimmHess/UnrealImageCapture/blob/master/CaptureToDisk/Source/CaptureToDisk/CaptureToDisk.Build.cs).
 
 **Kudos to the UE4 and UE5 community!**
 
-**Special thanks to @Panakotta00, for pointing to an even better GPU readback!**
+**Special thanks to [Panakotta00](https://github.com/Panakotta00), for pointing to an even better GPU readback!**
 
 Using the source as is you should get an `AFrameCaptureManager` (`Actor`) in your scene with the following settings.
 ![](https://github.com/TimmHess/UnrealImageCapture/blob/master/gfx/FrameCaptureManage_settings.png)
